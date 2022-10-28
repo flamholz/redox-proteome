@@ -1,0 +1,439 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     15383,        431]
+NotebookOptionsPosition[     14575,        411]
+NotebookOutlinePosition[     14916,        426]
+CellTagsIndexPosition[     14873,        423]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"flux", " ", "balance", " ", "for", " ", 
+    SubscriptBox["C", "int"], " ", "with", " ", "only", " ", "fermentation"}],
+    " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"fluxRelations", " ", "=", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{
+        SubscriptBox["J", "cat"], "\[Rule]", 
+        RowBox[{
+         SubscriptBox["v", "cat"], "*", 
+         SubscriptBox["C", "nt"], "*", 
+         SubscriptBox["\[Phi]", "cat"], "*", 
+         SubscriptBox["C", "prot"]}]}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        SubscriptBox["J", "ana"], "\[Rule]", 
+        RowBox[{
+         SubscriptBox["v", "ana"], "*", 
+         SubscriptBox["C", "int"], "*", 
+         SubscriptBox["\[Phi]", "ana"], "*", 
+         SubscriptBox["C", "prot"]}]}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        SubscriptBox["J", "ferm"], "\[Rule]", 
+        RowBox[{
+         SubscriptBox["v", "ferm"], "*", 
+         SubscriptBox["C", "int"], "*", 
+         SubscriptBox["\[Phi]", "ferm"], "*", 
+         SubscriptBox["C", "prot"]}]}]}], "}"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    SubscriptBox["dC", "int"], "=", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"2", 
+       SubscriptBox["J", "cat"]}], "-", 
+      SubscriptBox["J", "ana"], "-", 
+      SubscriptBox["J", "ferm"]}], "/.", "fluxRelations"}]}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    SubscriptBox["dC", "ECH"], "=", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"4", 
+       SubscriptBox["J", "cat"]}], "-", 
+      RowBox[{"750", 
+       SubscriptBox["J", "ana"]}], "-", 
+      RowBox[{"4", 
+       SubscriptBox["J", "ferm"]}]}], "/.", "fluxRelations"}]}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    SubscriptBox["dC", "ATP"], "=", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"2", 
+       SubscriptBox["J", "cat"]}], "-", 
+      RowBox[{"1500", 
+       SubscriptBox["J", "ana"]}], "-", 
+      RowBox[{
+       SubscriptBox["v", "O"], "*", 
+       SubscriptBox["\[Phi]", "O"], "*", 
+       SubscriptBox["C", "prot"]}]}], "/.", "fluxRelations"}]}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     SubscriptBox["\[Phi]", "v"], "=", 
+     RowBox[{"{", 
+      RowBox[{
+       SubscriptBox["\[Phi]", "cat"], ",", 
+       SubscriptBox["\[Phi]", "ana"], ",", 
+       SubscriptBox["\[Phi]", "ferm"], ",", 
+       SubscriptBox["\[Phi]", "O"]}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"allocation", " ", "=", " ", 
+     RowBox[{
+      RowBox[{"Total", "[", 
+       SubscriptBox["\[Phi]", "v"], "]"}], "\[Equal]", "1"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"eqns", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      SubscriptBox["dC", "int"], ",", 
+      SubscriptBox["dC", "ECH"], ",", 
+      SubscriptBox["dC", "ATP"]}], "}"}]}], "\[IndentingNewLine]", 
+   RowBox[{"Solve", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"eqns", "\[Equal]", "0"}], ",", " ", "allocation"}], "}"}], 
+     ",", 
+     RowBox[{"{", 
+      RowBox[{
+       SubscriptBox["\[Phi]", "cat"], ",", 
+       SubscriptBox["\[Phi]", "ana"], ",", 
+       SubscriptBox["\[Phi]", "ferm"], ",", 
+       SubscriptBox["\[Phi]", "O"]}], "}"}]}], "]"}], 
+   "\[IndentingNewLine]"}]}]], "Input",
+ CellChangeTimes->{{3.875714975868408*^9, 3.875715352179269*^9}, {
+   3.875715394418399*^9, 3.875715479448689*^9}, {3.875715516757042*^9, 
+   3.875715594015061*^9}, {3.8757156547231216`*^9, 3.875715655847787*^9}, 
+   3.875715845095245*^9, {3.875715997958859*^9, 3.875716038110815*^9}, {
+   3.875716093339972*^9, 3.875716141390216*^9}, 3.875716653584046*^9, {
+   3.875717131473398*^9, 3.875717144320118*^9}, {3.875717203117997*^9, 
+   3.875717206590176*^9}, {3.875717318108151*^9, 3.875717339588799*^9}, {
+   3.8757173960342407`*^9, 3.875717406386754*^9}},
+ CellLabel->
+  "In[502]:=",ExpressionUUID->"37757b34-7e0b-4e6b-a37d-d93e8c0f6710"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"-", 
+    SubscriptBox["C", "int"]}], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "ana"], " ", 
+   SubscriptBox["\[Phi]", "ana"]}], "+", 
+  RowBox[{"2", " ", 
+   SubscriptBox["C", "nt"], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "cat"], " ", 
+   SubscriptBox["\[Phi]", "cat"]}], "-", 
+  RowBox[{
+   SubscriptBox["C", "int"], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "ferm"], " ", 
+   SubscriptBox["\[Phi]", "ferm"]}]}]], "Output",
+ CellChangeTimes->{
+  3.875715322292547*^9, 3.875715452374546*^9, {3.875715542094317*^9, 
+   3.875715594576434*^9}, 3.875715656127925*^9, 3.875715845361083*^9, {
+   3.875716028352639*^9, 3.875716038583145*^9}, 3.875716110094811*^9, 
+   3.8757161418781652`*^9, 3.875716664193625*^9, 3.875717145569285*^9, 
+   3.8757172144699574`*^9, 3.875717353172943*^9, 3.875717407417104*^9},
+ CellLabel->
+  "Out[503]=",ExpressionUUID->"985f6ff3-2d19-4a1b-bdd3-46794569cc67"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"-", "750"}], " ", 
+   SubscriptBox["C", "int"], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "ana"], " ", 
+   SubscriptBox["\[Phi]", "ana"]}], "+", 
+  RowBox[{"4", " ", 
+   SubscriptBox["C", "nt"], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "cat"], " ", 
+   SubscriptBox["\[Phi]", "cat"]}], "-", 
+  RowBox[{"4", " ", 
+   SubscriptBox["C", "int"], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "ferm"], " ", 
+   SubscriptBox["\[Phi]", "ferm"]}]}]], "Output",
+ CellChangeTimes->{
+  3.875715322292547*^9, 3.875715452374546*^9, {3.875715542094317*^9, 
+   3.875715594576434*^9}, 3.875715656127925*^9, 3.875715845361083*^9, {
+   3.875716028352639*^9, 3.875716038583145*^9}, 3.875716110094811*^9, 
+   3.8757161418781652`*^9, 3.875716664193625*^9, 3.875717145569285*^9, 
+   3.8757172144699574`*^9, 3.875717353172943*^9, 3.8757174074211073`*^9},
+ CellLabel->
+  "Out[504]=",ExpressionUUID->"15078434-ec73-4bde-8658-643406dc590c"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"-", "1500"}], " ", 
+   SubscriptBox["C", "int"], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "ana"], " ", 
+   SubscriptBox["\[Phi]", "ana"]}], "+", 
+  RowBox[{"2", " ", 
+   SubscriptBox["C", "nt"], " ", 
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "cat"], " ", 
+   SubscriptBox["\[Phi]", "cat"]}], "-", 
+  RowBox[{
+   SubscriptBox["C", "prot"], " ", 
+   SubscriptBox["v", "O"], " ", 
+   SubscriptBox["\[Phi]", "O"]}]}]], "Output",
+ CellChangeTimes->{
+  3.875715322292547*^9, 3.875715452374546*^9, {3.875715542094317*^9, 
+   3.875715594576434*^9}, 3.875715656127925*^9, 3.875715845361083*^9, {
+   3.875716028352639*^9, 3.875716038583145*^9}, 3.875716110094811*^9, 
+   3.8757161418781652`*^9, 3.875716664193625*^9, 3.875717145569285*^9, 
+   3.8757172144699574`*^9, 3.875717353172943*^9, 3.875717407424574*^9},
+ CellLabel->
+  "Out[505]=",ExpressionUUID->"d13548dc-3a16-4651-a646-263e7083ad85"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"-", 
+      SubscriptBox["C", "int"]}], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "ana"], " ", 
+     SubscriptBox["\[Phi]", "ana"]}], "+", 
+    RowBox[{"2", " ", 
+     SubscriptBox["C", "nt"], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "cat"], " ", 
+     SubscriptBox["\[Phi]", "cat"]}], "-", 
+    RowBox[{
+     SubscriptBox["C", "int"], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "ferm"], " ", 
+     SubscriptBox["\[Phi]", "ferm"]}]}], ",", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"-", "750"}], " ", 
+     SubscriptBox["C", "int"], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "ana"], " ", 
+     SubscriptBox["\[Phi]", "ana"]}], "+", 
+    RowBox[{"4", " ", 
+     SubscriptBox["C", "nt"], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "cat"], " ", 
+     SubscriptBox["\[Phi]", "cat"]}], "-", 
+    RowBox[{"4", " ", 
+     SubscriptBox["C", "int"], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "ferm"], " ", 
+     SubscriptBox["\[Phi]", "ferm"]}]}], ",", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"-", "1500"}], " ", 
+     SubscriptBox["C", "int"], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "ana"], " ", 
+     SubscriptBox["\[Phi]", "ana"]}], "+", 
+    RowBox[{"2", " ", 
+     SubscriptBox["C", "nt"], " ", 
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "cat"], " ", 
+     SubscriptBox["\[Phi]", "cat"]}], "-", 
+    RowBox[{
+     SubscriptBox["C", "prot"], " ", 
+     SubscriptBox["v", "O"], " ", 
+     SubscriptBox["\[Phi]", "O"]}]}]}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.875715322292547*^9, 3.875715452374546*^9, {3.875715542094317*^9, 
+   3.875715594576434*^9}, 3.875715656127925*^9, 3.875715845361083*^9, {
+   3.875716028352639*^9, 3.875716038583145*^9}, 3.875716110094811*^9, 
+   3.8757161418781652`*^9, 3.875716664193625*^9, 3.875717145569285*^9, 
+   3.8757172144699574`*^9, 3.875717353172943*^9, 3.875717407428377*^9},
+ CellLabel->
+  "Out[508]=",ExpressionUUID->"88b0a6c8-fd55-4ebe-9c96-13bfa66db522"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     SubscriptBox["\[Phi]", "cat"], "\[Rule]", 
+     FractionBox[
+      RowBox[{"373", " ", 
+       SubscriptBox["C", "int"], " ", 
+       SubscriptBox["v", "ana"], " ", 
+       SubscriptBox["v", "ferm"], " ", 
+       SubscriptBox["v", "O"]}], 
+      RowBox[{
+       RowBox[{"3746", " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"]}], "+", 
+       RowBox[{"748", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "O"]}], "+", 
+       RowBox[{"373", " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}], "-", 
+       RowBox[{"2", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}]}]]}], ",", 
+    RowBox[{
+     SubscriptBox["\[Phi]", "ana"], "\[Rule]", 
+     FractionBox[
+      RowBox[{"2", " ", 
+       SubscriptBox["C", "nt"], " ", 
+       SubscriptBox["v", "cat"], " ", 
+       SubscriptBox["v", "ferm"], " ", 
+       SubscriptBox["v", "O"]}], 
+      RowBox[{
+       RowBox[{
+        RowBox[{"-", "3746"}], " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"]}], "-", 
+       RowBox[{"748", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "O"]}], "-", 
+       RowBox[{"373", " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}], "+", 
+       RowBox[{"2", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}]}]]}], ",", 
+    RowBox[{
+     SubscriptBox["\[Phi]", "ferm"], "\[Rule]", 
+     FractionBox[
+      RowBox[{"748", " ", 
+       SubscriptBox["C", "nt"], " ", 
+       SubscriptBox["v", "ana"], " ", 
+       SubscriptBox["v", "cat"], " ", 
+       SubscriptBox["v", "O"]}], 
+      RowBox[{
+       RowBox[{"3746", " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"]}], "+", 
+       RowBox[{"748", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "O"]}], "+", 
+       RowBox[{"373", " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}], "-", 
+       RowBox[{"2", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}]}]]}], ",", 
+    RowBox[{
+     SubscriptBox["\[Phi]", "O"], "\[Rule]", 
+     FractionBox[
+      RowBox[{"3746", " ", 
+       SubscriptBox["C", "int"], " ", 
+       SubscriptBox["C", "nt"], " ", 
+       SubscriptBox["v", "ana"], " ", 
+       SubscriptBox["v", "cat"], " ", 
+       SubscriptBox["v", "ferm"]}], 
+      RowBox[{
+       RowBox[{"3746", " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"]}], "+", 
+       RowBox[{"748", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "O"]}], "+", 
+       RowBox[{"373", " ", 
+        SubscriptBox["C", "int"], " ", 
+        SubscriptBox["v", "ana"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}], "-", 
+       RowBox[{"2", " ", 
+        SubscriptBox["C", "nt"], " ", 
+        SubscriptBox["v", "cat"], " ", 
+        SubscriptBox["v", "ferm"], " ", 
+        SubscriptBox["v", "O"]}]}]]}]}], "}"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.875715322292547*^9, 3.875715452374546*^9, {3.875715542094317*^9, 
+   3.875715594576434*^9}, 3.875715656127925*^9, 3.875715845361083*^9, {
+   3.875716028352639*^9, 3.875716038583145*^9}, 3.875716110094811*^9, 
+   3.8757161418781652`*^9, 3.875716664193625*^9, 3.875717145569285*^9, 
+   3.8757172144699574`*^9, 3.875717353172943*^9, 3.875717407431861*^9},
+ CellLabel->
+  "Out[509]=",ExpressionUUID->"735906e2-bf06-452b-9686-f87143e32614"]
+}, Open  ]]
+},
+WindowSize->{808, 747},
+WindowMargins->{{Automatic, -900}, {Automatic, -163}},
+FrontEndVersion->"12.0 for Mac OS X x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 3931, 109, 291, "Input",ExpressionUUID->"37757b34-7e0b-4e6b-a37d-d93e8c0f6710"],
+Cell[4514, 133, 998, 25, 37, "Output",ExpressionUUID->"985f6ff3-2d19-4a1b-bdd3-46794569cc67"],
+Cell[5515, 160, 1021, 25, 37, "Output",ExpressionUUID->"15078434-ec73-4bde-8658-643406dc590c"],
+Cell[6539, 187, 969, 24, 37, "Output",ExpressionUUID->"d13548dc-3a16-4651-a646-263e7083ad85"],
+Cell[7511, 213, 2165, 60, 83, "Output",ExpressionUUID->"88b0a6c8-fd55-4ebe-9c96-13bfa66db522"],
+Cell[9679, 275, 4880, 133, 176, "Output",ExpressionUUID->"735906e2-bf06-452b-9686-f87143e32614"]
+}, Open  ]]
+}
+]
+*)
+
