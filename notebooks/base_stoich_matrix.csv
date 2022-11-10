@@ -1,8 +1,8 @@
-﻿process,nutrient,intermediate,precursor,fermentation_product,respiration_product,EC,ECH,ADP,ATP,protein,note
-glycolysis,-1,2,0,0,0,-4,4,-2,2,0,"EMP glycolysis : 2 ATP, 2 pyr/glucose, 4 e -"
-fermentation,0,-1,0,1,0,2,-2,0,0,0,"pyruvate to lactate fermentation, no ATP"
-TCA_cycle,0,-1,0,0,3,-10,10,-1,1,0,"TCA cycle, 3 CO2/pyr, 1 GTP, 10 e-"
-respiration,0,0,0,0,0,1,-1,-1,1,0,"O2 respiration, 1 ATP per e-"
-anabolism,0,-1,1,0,0,3,-3,2,-2,0,biosynthesis of an average amino acid
-translation,0,0,-1,0,0,0,0,4,-4,1,"translation, 4 ATP/aa"
-homeostasis,0,0,0,0,0,0,0,1,-1,0,"the remaining ""other"" proteins use ATP for homeostasis"
+﻿process,nutrient,intermediate,precursor,fermentation_product,respiration_product,EC,ECH,ADP,ATP,protein,n_enzymes,note
+glycolysis,-1,2,0,0,0,-2,2,-2,2,0,10,"EMP glycolysis : 2 ATP, 2 pyr/glucose, 4 e -"
+fermentation,0,-1,0,1,0,1,-1,0,0,0,1,"pyruvate to lactate fermentation, no ATP"
+TCA_cycle,0,-1,0,0,3,-5,5,-1,1,0,8,"TCA cycle, 3 CO2/pyr, 1 GTP, 10 e-"
+respiration,0,0,0,0,0,1,-1,-2,2,0,30,"O2 respiration, 1 ATP per e-"
+anabolism,0,-1,1,0,0,1.5,-1.5,2,-2,0,5,biosynthesis of an average amino acid
+translation,0,0,-1,0,0,0,0,4,-4,1,23,"translation, 4 ATP/aa"
+homeostasis,0,0,0,0,0,0,0,1,-1,0,1,"the remaining ""other"" proteins use ATP for homeostasis"
