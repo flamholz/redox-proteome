@@ -3,6 +3,6 @@ glycolysis,-1,2,0,0,0,-2,2,-2,2,0,10,"EMP glycolysis : 2 ATP, 2 pyr/glucose, 4 e
 fermentation,0,-1,0,1,0,1,-1,0,0,0,1,"pyruvate to lactate fermentation, no ATP"
 TCA_cycle,0,-1,0,0,3,-5,5,-1,1,0,8,"TCA cycle, 3 CO2/pyr, 1 GTP, 10 e-"
 respiration,0,0,0,0,0,1,-1,-2,2,0,30,"O2 respiration, 1 ATP per e-"
-anabolism,0,-1,1,0,0,1.5,-1.5,2,-2,0,5,biosynthesis of an average amino acid
+anabolism,0,-5,3,0,0,5,-5,2,-2,0,25,biosynthesis pathways for amino acids have ≈5 enzymes. treating as 25 enzymes since they are catalyzing ≈5 reactions due to stoichiometry (converting 3 C to 5 C)
 translation,0,0,-1,0,0,0,0,4,-4,1,23,"translation, 4 ATP/aa"
 homeostasis,0,0,0,0,0,0,0,1,-1,0,1,"the remaining ""other"" proteins use ATP for homeostasis"

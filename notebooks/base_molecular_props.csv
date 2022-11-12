@@ -1,11 +1,11 @@
 ﻿,NC,NOSC,internal,note
 nutrient,6,0,0,"""glucose"""
 intermediate,3,0.666666667,1,"""pyruvate"""
-precursor,3,-0.333333333,1,"Default NOSC values, for now assuming 3 C/AA for simplicity"
+precursor,5,0,1,"Default NOSC values, 5 C/AA"
 fermentation_product,3,0,0,"""lactate"""
 respiration_product,1,4,0,"""CO2"""
 EC,20,0,1,Oxidized single e- carrier with 10 carbon to ensure balancing of C. e- balancing is simpler with 1 e- carriers than 2. 
 ECH,20,-0.1,1,Reduced 1e- carrier.
-ADP,10,0,1,
-ATP,10,0,1,
-protein,3,-0.333333333,0,"Default NOSC values, for now assuming 3 C/AA for simplicity"
+ADP,10,0,1,ADP
+ATP,10,0,1,ATP
+protein,5,0,0,"Default NOSC values, 5 C/AA"
