@@ -8,7 +8,7 @@ from collections import defaultdict
 class LinearAllocationModel(object):
     """Coarse-grained linear model of allocation of proteome resources while balancing ATP and e- fluxes."""
     
-    def __init__(self, metabolites_df, S_df):
+    def __init__(self, metabolites_df, S_df, ):
         self.m_df = metabolites_df
         self.S_df = S_df
         
@@ -73,12 +73,27 @@ class LinearAllocationModel(object):
         self._check_c_balance()
         self._check_e_balance()
         
+    def set_n_enzymes(self, n_enzymes):
+        assert self.n_enz.size == len(n_enzymes)
+        self.S_df['n_enzymes'] = n_enzymes
+        self._update_S()
+        
     def _update_S(self):
         # last column is a note
         numeric_cols = self.S_df.columns[0:-2]
         # make a numpy array matrix
         self.S = self.S_df[numeric_cols].values.copy()
         self.n_enz = self.S_df['n_enzymes'].values
+        self.n_processes = self.S_df.index.size
+        
+        # v_i: rate constant [mol/s/g] per protein
+        # default value set by assuming kcat ≈ 10 /s, MW = 30 kDa = 3e4 g/mol.
+        # v_i = 10/3e4 = 3.33e-4 mol/g/s.
+        default_v = 3e-4
+        
+        # vi are rescaled by the number of proteins involved so that costs (1/vi)
+        # reflect the mass of protein needed to catalyze 1 flux unit
+        self.vs = np.ones(self.n_processes)*default_v/self.n_enz
         
     def _check_c_balance(self):
         c_bal = np.round(self.S @ self.m_df.NC, decimals=1)
@@ -105,23 +120,16 @@ class LinearAllocationModel(object):
             mu_hr: exponential growth rate in [1/hr] units
             vs: per-process rate constant [mol/s/g] per protein
         """
-        # 6 named process in the matrix, plus "other"
-        n_processes = self.S_df.index.size
+        n_proc = self.n_processes
         S = self.S
 
         # per-process fluxes j_i, units of mol/L cell volume/hour
         # j_i = v_i * phi_i * rho_prot
-        phis = cp.Variable(name='phis', shape=n_processes, nonneg=True)
+        phis = cp.Variable(name='phis', shape=n_proc, nonneg=True)
 
-        # v_i: rate constant [mol/s/g] per protein
-        # default value set by assuming kcat ≈ 10 /s, MW = 30 kDa = 3e4 g/mol.
-        # v_i = 10/3e4 = 3.33e-4 mol/g/s.
-        default_v = 3e-4
-        # default vi are rescaled by the number of proteins involved so that
-        # costs (1/vi) reflect the mass of protein needed to catalyze 1 flux unit
-        default_vs = np.ones(n_processes)*default_v/self.n_enz
-        vs = cp.Parameter(name='vs', shape=n_processes, 
-                          value=default_vs, pos=True)
+        # v_i: rate constant [mol/s/g] per protein, see self._update_S
+        vs = cp.Parameter(
+            name='vs', shape=n_proc, value=self.vs, pos=True)
 
         # rho_prot = M_prot/V_cell protein mass density ≈ 250 g/L (Milo 2013)
         rho_prot = cp.Parameter(name='rho_prot', value=250, pos=True)
@@ -147,8 +155,28 @@ class LinearAllocationModel(object):
         per_s_conv = 1.0/3600
         g_mol_aa = 100
         mu_hr = cp.Parameter(name='mu_hr', nonneg=True)
-        protein_flux_balance = js[-2]-mu_hr*per_s_conv*rho_prot/g_mol_aa
         
+        # js[-2] is the total protein production rate, which must be
+        # balanced by dilution due to growth at steady-state
+        translation_flux = js[-2]
+        protein_flux_balance = (
+            translation_flux - mu_hr*per_s_conv*rho_prot/g_mol_aa)
+        
+        # I would prefer to balance the individual categories, but then
+        # I need to calcualte the per-category production, which requires
+        # me to multiply two variables: phi_i*translation_rate
+        
+        # phi_o catalyzes "homeostasis" flux which we take to represent maintenance
+        # S matrix defines ATP consumption stoich of homeostasis (1 ATP -> ADP).
+        # maintenance energy on glucose is ≈ 20 mmol ATP/gDW/hr (Hempfling & Maizner 1975)
+        # converting to mmol ATP/g protein/S assuming 1 gDW contains 0.5 g protein,
+        # then into flux units [mol ATP/L/s] where L is a liter of cell volume
+        homeostasis_ATP_flux = js[-1]*self.S_df.at['homeostasis', 'ADP']  # ADP coeff is positive
+        min_ATP_consumption_s = 1e-3*rho_prot*20*2/3600 # ≈ 0.003
+        
+        # add maintenance energy production constraint.
+        maintenance_energy = homeostasis_ATP_flux >= min_ATP_consumption_s
+                
         # Can only enforce balancing for internal metabolites, 
         # but this means ATP, e- and C will be balanced internally
         metab_flux_balance = S.T @ js
@@ -156,10 +184,11 @@ class LinearAllocationModel(object):
         internal_metab_flux_balance = cp.multiply(metab_flux_balance, internal_mets)
         cons = [internal_metab_flux_balance == 0,
                 protein_flux_balance == 0,
+                maintenance_energy,
                 allocation_constr]
         return cp.Problem(obj, cons)
     
-    def maximize_mu(self, mu_min=0.05, mu_max=4.15, mu_step=0.05):
+    def maximize_mu(self, mu_min=0.05, mu_max=5.16, mu_step=0.1):
         mus = np.arange(mu_min, mu_max, mu_step)
         mu_argmax = -1
         opt = None 
@@ -170,7 +199,7 @@ class LinearAllocationModel(object):
             p.param_dict['mu_hr'].value = mu_val
             soln = p.solve()
             if p.status in ("infeasible", "unbounded"):
-                break
+                continue
             
             mu_argmax = mu_val
             opt = soln
