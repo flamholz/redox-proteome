@@ -225,6 +225,18 @@ def add_KEGGpathways2df(cds_df, kegg_mapping_fname, kegg_pathways_fname):
 
 
 def add_isoforms2df(cds_df, isoform_fname):
+    """Add entries for isoforms to the dataframe.
+    
+    The XML file only contains information for the primary accession. This function
+    adds entries for the isoforms from a secondary file provided.
+
+    Args:
+        cds_df (pd.DataFrame): dataframe of CDS information.
+        isoform_fname (str): filename of the isoform file.
+    
+    Returns:
+        The updated dataframe.
+    """
     # maps isoform ID to the primary accession
     relevant_isoforms = dict()
     for idx, row in cds_df.iterrows():
