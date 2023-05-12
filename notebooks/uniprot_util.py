@@ -7,6 +7,12 @@ from lxml import etree
 from Bio import SeqIO
 from seq_util import calc_protein_nosc
 
+__author__ = 'Avi Flamholz'
+
+"""
+This module contains functions for parsing UniProt XML files.
+"""
+
 
 KEYS = ['aa_seq', 'num_aas', 'mw_daltons',
         'transmembrane_aas', 'transmembrane_Cs',
@@ -15,12 +21,50 @@ KEYS = ['aa_seq', 'num_aas', 'mw_daltons',
         'GO_terms', 'COG_IDs', 'KEGG_IDs', 'isoform_accessions']
 B_PAT = re.compile('^b\d+$')
 
+
 def _open_helper(fname, gz):
+    """Opens a file for reading, possibly gzipped.
+    
+    Args:
+        fname (str): path to the file.
+        gz (bool): whether the file is gzipped.
+    
+    Returns:
+        file: file handle.
+    """
     if gz:
         return gzip.open(fname)
     return open(fname)
 
+
 def uniprot_xml2df(fname, gz=True, extract_b_number=False):
+    """Parses a UniProt XML file into a pandas DataFrame.
+    
+    Args:
+        fname (str): path to the UniProt XML file.
+        gz (bool): whether the file is gzipped.
+        extract_b_number (bool): whether to extract E. coli b numbers from the XML.
+    
+    Returns:
+        pandas.DataFrame: DataFrame with the following columns:
+            primary_accession (str): primary UniProt accession.
+            b_number (str): E. coli b number (if extract_b_number is True).
+            aa_seq (str): amino acid sequence.
+            num_aas (int): number of amino acids.
+            mw_daltons (float): molecular weight in Daltons.
+            accessions (str): all UniProt accessions.
+            isoform_accessions (str): all isoform accessions.
+            gene_name (str): gene name.
+            description (str): protein description.
+            locus_tags (str): all locus tags.
+            GO_terms (str): all GO terms.
+            COG_IDs (str): all COG IDs.
+            KEGG_IDs (str): all KEGG IDs.
+            transmembrane_aas (int): number of transmembrane amino acids.
+            transmembrane_Cs (int): number of transmembrane C atoms.
+            fraction_transmembrane (float): fraction of transmembrane amino acids.
+            fraction_transmembrane_C (float): fraction of C atoms that are transmembrane. 
+    """
     handle = _open_helper(fname, gz)
     data_dict = dict([(k,[]) for k in KEYS])
     if extract_b_number:
@@ -134,6 +178,18 @@ def uniprot_xml2df(fname, gz=True, extract_b_number=False):
 
 
 def add_KEGGpathways2df(cds_df, kegg_mapping_fname, kegg_pathways_fname):
+    """Add KEGG pathway information to the dataframe.
+
+    Args:
+        cds_df (pd.DataFrame): dataframe of CDS information.
+        kegg_mapping_fname (str): filename of the KEGG mapping file. 
+            Maps KEGG IDs to pathways.
+        kegg_pathways_fname (str): filename of the KEGG pathways file.
+            Maps KEGG pathway IDs to pathway descriptions.
+
+    Returns:
+        The updated data frame.
+    """
     kegg_mapping = pd.read_csv(kegg_mapping_fname, sep='\t', header=None)
     kegg_mapping.columns = 'KEGG_gene_ID,KEGG_path_ID'.split(',')
     kegg_mapping = kegg_mapping.set_index('KEGG_gene_ID')

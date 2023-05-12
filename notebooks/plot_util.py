@@ -5,16 +5,26 @@ import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 
+__author__ = 'Avi Flamholz'
+
+"""
+Utility functions for plotting.
+"""
+
 
 def ridgeplot(long_df, categorical_key, value_key, overlap=0, cat_order=None, palette=None, labels=None, n_points=150):
     """
-    Creates a standard ridgeline plot.
+    Creates a standard ridgeline plot -- plotting smoothed distributions for each category.
 
-    data, list of lists.
-    overlap, overlap between distributions. 1 max overlap, 0 no overlap.
-    fill, matplotlib color to fill the distributions.
-    n_points, number of points to evaluate each distribution function.
-    labels, values to place on the y axis to describe the distributions.
+    Args:
+        long_df (pandas.DataFrame): long format dataframe with the data to plot.
+        categorical_key (str): name of the column defining categories to plot ridges for.
+        value_key (str): name of the column containing values to plot distributions for.
+        overlap (float): overlap between adjacent plots. 1 max overlap, 0 no overlap.
+        cat_order (list): order to plot the categories in.
+        palette (list): list of colors to use for the categories.
+        labels (dict): dictionary mapping categories to labels.
+        n_points (int): number of points to evaluate each distribution function.
     """    
     if overlap > 1 or overlap < 0:
         raise ValueError('overlap must be in [0 1]')
