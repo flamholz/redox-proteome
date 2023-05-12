@@ -4,11 +4,11 @@ import os
 import pandas as pd
 import seaborn as sns
 
-from tqdm import tqdm
 from Bio import SeqIO
+from multiprocessing import Pool
 from os import path
 from seq_util import *
-
+from tqdm import tqdm
 
 __author__ = 'Avi Flamholz'
 
@@ -28,6 +28,9 @@ def _argparser():
                         help='input directory or filename')
     parser.add_argument('-o', '--outdir', dest='outdir',
                         help='output directory')
+    parser.add_argument('-n', '--num_processors', dest='num_processors',
+                        type=int, default=1,
+                        help='number of processors to use')
     return parser
 
 
@@ -35,7 +38,9 @@ def _do_args():
     """Parses command-line arguments.
     
     Returns:
-        tuple: (list of input FASTA filenames, output directory)
+        tuple: (list of input FASTA filenames,
+                output directory,
+                number of processors)
     """
     p = _argparser()
     args = p.parse_args()
@@ -51,7 +56,7 @@ def _do_args():
     if not path.isdir(args.outdir):
         os.mkdir(args.outdir)
     
-    return fnames, args.outdir
+    return fnames, args.outdir, args.num_processors
 
 
 def _get_genome_accession(fname):
@@ -111,7 +116,7 @@ def _do_single_fasta(fname):
             bac120_nosc_data['NC'].append(None)
             bac120_nosc_data['NOSC'].append(None)
 
-    return pd.DataFrame(bac120_nosc_data)
+    return fname, pd.DataFrame(bac120_nosc_data)
 
 
 def _calc_genome_nosc(genome_df):
@@ -128,20 +133,25 @@ def _calc_genome_nosc(genome_df):
 
 def do_main():
     """
-    Loops over all the FASTA files in the input directory and calculates
-    NOSC values for each protein sequence. Saves the results to a CSV file.
+    Spawns a process for each input FASTA file, calculates the NOSC values for all the
+    protein sequences in the file, and saves the results to a CSV file.
     """
-    in_fnames, outdir = _do_args()
-
+    in_fnames, outdir, n_proc = _do_args()
     genome_averages = dict(genome_accession=[], genome_avg_NOSC=[])
-    for fname in tqdm(in_fnames):
-        df = _do_single_fasta(fname)
-        out_fname = path.join(_get_out_fname(fname, outdir))
-        df.to_csv(out_fname, index=False)
 
+    print("Using {0} workers to process FASTA files".format(n_proc))
+    with Pool(n_proc) as p:
+        deferred = p.starmap_async(_do_single_fasta, [(fname,) for fname in in_fnames])
+        # Wait for all the processes to finish, get the results
+        results = deferred.get()
+
+    for my_fname, res_df in results:
+        out_fname = path.join(_get_out_fname(my_fname, outdir))
+        res_df.to_csv(out_fname, index=False)
+        
         # Calculate the carbon-weighted genome average NOSC value
-        genome_averages['genome_accession'].append(_get_genome_accession(fname))
-        genome_averages['genome_avg_NOSC'].append(_calc_genome_nosc(df))
+        genome_averages['genome_accession'].append(_get_genome_accession(my_fname))
+        genome_averages['genome_avg_NOSC'].append(_calc_genome_nosc(res_df))
 
     # Save the genome averages to a CSV file
     genome_averages_df = pd.DataFrame(genome_averages)
