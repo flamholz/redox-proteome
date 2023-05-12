@@ -1,12 +1,16 @@
 import gzip 
 import pandas as pd
+import numpy as np
 import re
 
 from lxml import etree
 from Bio import SeqIO
+from seq_util import calc_protein_nosc
 
 
-KEYS = ['aa_seq', 'num_aas', 'mw_daltons', 'transmembrane_aas', 'fraction_transmembrane',
+KEYS = ['aa_seq', 'num_aas', 'mw_daltons',
+        'transmembrane_aas', 'transmembrane_Cs',
+        'fraction_transmembrane', 'fraction_transmembrane_C',
         'primary_accession', 'accessions', 'gene_name', 'description', 'locus_tags',
         'GO_terms', 'COG_IDs', 'KEGG_IDs', 'isoform_accessions']
 B_PAT = re.compile('^b\d+$')
@@ -29,6 +33,8 @@ def uniprot_xml2df(fname, gz=True, extract_b_number=False):
     for entry in root.findall('entry', nsmap):
         # grab the protein sequence
         seq = entry.find('sequence', nsmap)
+        # Need NC for the fraction of transmembrane C atoms
+        Ce, NC = calc_protein_nosc(seq.text)
         data_dict['aa_seq'].append(seq.text)
         data_dict['mw_daltons'].append(float(seq.attrib['mass']))
         seq_len = len(seq.text)
@@ -62,7 +68,8 @@ def uniprot_xml2df(fname, gz=True, extract_b_number=False):
         
         # count up the number of transmembrane amino acids
         tm_locations = entry.findall("feature[@type='transmembrane region']/location", nsmap)
-        tm_len = 0
+        tm_len = 0  # amino acids
+        tm_C = 0    # carbons
         tm_fail = False
         for tm_loc in tm_locations:
             begin = tm_loc.find('begin', nsmap)
@@ -71,16 +78,23 @@ def uniprot_xml2df(fname, gz=True, extract_b_number=False):
             end_pos = int(end.attrib.get('position', -1))
             tm_len += end_pos - begin_pos
             
+            tm_seq = seq.text[begin_pos:end_pos]
+            _, segment_Cs = calc_protein_nosc(tm_seq)
+            
             # in some cases the boundaries of the TM section are not know.
             # would rather skip these examples. 
             if begin_pos < 0 or end_pos < 0:
                 tm_fail = True
                 tm_len = -1
                 break
-                
+            tm_C += segment_Cs
+        
         # Negative tm_len is a sentinel that we failed to extract
+        # TODO: provide in carbon units rather than AA units
         data_dict['transmembrane_aas'].append(tm_len)
+        data_dict['transmembrane_Cs'].append(tm_C)
         data_dict['fraction_transmembrane'].append(tm_len/seq_len)
+        data_dict['fraction_transmembrane_C'].append(tm_C/NC)
 
         # extract kegg ID and go terms
         db_refs = entry.findall('dbReference', nsmap)
@@ -162,6 +176,9 @@ def add_isoforms2df(cds_df, isoform_fname):
             if iso_id:
                 relevant_isoforms[iso_id] = row.primary_accession 
     
+    # These columns should not be copies from 
+    cols2copy = ['accessions', 'gene_name', 'description', 'locus_tags', 'GO_terms', 'COG_IDs', 
+         'KEGG_IDs', 'isoform_accessions' ]
     rows2add = []
     reindexed_cds = cds_df.set_index('primary_accession')
     for rec in SeqIO.parse(isoform_fname, 'fasta'):
@@ -169,8 +186,9 @@ def add_isoforms2df(cds_df, isoform_fname):
         iso_id = desc.split('|')[1]
         if iso_id in relevant_isoforms:
             primary_id = relevant_isoforms[iso_id]
-            iso_row_dict = reindexed_cds.loc[primary_id].to_dict()
+            iso_row_dict = reindexed_cds[cols2copy].loc[primary_id].to_dict()
             iso_row_dict['primary_accession'] = iso_id
+            
             seq_str = str(rec.seq)
             iso_row_dict['aa_seq'] = seq_str
             iso_row_dict['num_aas'] = len(seq_str)
