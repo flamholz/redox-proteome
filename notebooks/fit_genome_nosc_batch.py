@@ -135,7 +135,7 @@ def do_main():
     in_fnames, outdir, n_proc = _do_args()
     fit_data = [] # list of dictionaries
 
-    print("Using {0} workers to process FASTA files".format(n_proc))
+    print("Using {0} workers to process genome NOSC files".format(n_proc))
     with Pool(n_proc) as p:
         deferred = p.starmap_async(_do_single_csv, [(fname,) for fname in in_fnames])
         # Wait for all the processes to finish, get the results
