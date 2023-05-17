@@ -7,7 +7,7 @@ import pandas as pd
 from Bio import SeqIO
 from multiprocessing import Pool
 from os import path
-from sklearn.mixture import GaussianMixture
+from sklearn.mixture import BayesianGaussianMixture
 
 __author__ = 'Avi Flamholz'
 
@@ -98,9 +98,10 @@ def _do_single_csv(fname):
             bic_score (float): the BIC score for the GMM fit.
     """
     my_df = pd.read_csv(fname)
-    gmm = GaussianMixture(n_components=2)
-    vals = my_df.NOSC.values.reshape(-1, 1)
-    gmm.fit(vals)
+    gmm = BayesianGaussianMixture(n_components=2)
+    mask = my_df.NOSC.notnull()
+    finite_vals = my_df[mask].NOSC.values.reshape(-1, 1)
+    gmm.fit(finite_vals)
 
     # Calculate the mean NOSC value for the genome
     genome_mean = my_df['Ce'].sum() / my_df['NC'].sum()
@@ -111,11 +112,12 @@ def _do_single_csv(fname):
     idxs = np.argsort(component_means)
     component_means = component_means[idxs]
     component_vars = gmm.covariances_.flatten()[idxs]
+    component_weights = gmm.weights_.flatten()[idxs]
     
     return dict(genome_accession=_get_genome_accession(fname), genome_mean=genome_mean,
-                soluble_protein_mean=component_means[1], soluble_protein_var=component_vars[1],
-                membrane_protein_mean=component_means[0], membrane_protein_var=component_vars[0],
-                aic_score=gmm.aic(vals), bic_score=gmm.bic(vals), log_likelihood_score=gmm.score(vals))
+                soluble_protein_mean=component_means[1], soluble_protein_var=component_vars[1], soluble_protein_weight=component_weights[1],
+                membrane_protein_mean=component_means[0], membrane_protein_var=component_vars[0], membrane_protein_weight=component_weights[0],
+                log_likelihood_score=gmm.score(finite_vals), converged=gmm.converged_)
 
 
 def do_main():
