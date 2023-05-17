@@ -34,6 +34,9 @@ def _argparser():
                         help='input directory or filename')
     parser.add_argument('-o', '--outdir', dest='outdir',
                         help='output directory')
+    parser.add_argument('-m', '--max_infiles', dest='max_infiles',
+                        type=int, default=None,
+                        help='maximum number of files to process')
     parser.add_argument('-n', '--num_processors', dest='num_processors',
                         type=int, default=1,
                         help='number of processors to use')
@@ -56,6 +59,10 @@ def _do_args():
         # load all the CSV files in the directory
         g1 = path.join(args.input, '*.nosc.csv')
         fnames = glob.glob(g1)
+
+    # Truncate the list of input files if requested
+    if args.max_infiles is not None:
+        fnames = fnames[:args.max_infiles]
     
     if not path.isdir(args.outdir):
         os.mkdir(args.outdir)
@@ -98,7 +105,7 @@ def _do_single_csv(fname):
             bic_score (float): the BIC score for the GMM fit.
     """
     my_df = pd.read_csv(fname)
-    gmm = BayesianGaussianMixture(n_components=2)
+    gmm = BayesianGaussianMixture(n_components=2, init_params='k-means++', max_iter=10000)
     mask = my_df.NOSC.notnull()
     finite_vals = my_df[mask].NOSC.values.reshape(-1, 1)
     gmm.fit(finite_vals)
