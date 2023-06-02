@@ -13,6 +13,13 @@ from tqdm import tqdm
 __author__ = 'Avi Flamholz'
 
 
+"""
+Uses multiprocessing to calculate the NOSC values for all the protein sequences in a set of FASTA files.
+
+Written for use on Phillips lab server, which has 48 cores. 
+"""
+
+
 def _argparser():
     """Generates a parser for command-line arguments.
     
