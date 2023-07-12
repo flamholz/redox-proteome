@@ -38,8 +38,8 @@ class LinearRespirationModel(object):
         self.S_df = S_df
         
         # Record the ZC values
-        self.ZCorg = self.m_df.loc['nutrient'].NOSC
-        self.ZCprod = self.m_df.loc['oxidized_product'].NOSC
+        self.ZCorg = self.m_df.loc['C_red'].NOSC
+        self.ZCprod = self.m_df.loc['C_ox'].NOSC
         self.ZCB = self.m_df.loc['biomass'].NOSC
         
         # make a numeric stoichiometric matrix
