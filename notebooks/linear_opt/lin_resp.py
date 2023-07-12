@@ -48,6 +48,12 @@ class LinearRespirationModel(object):
         self._check_c_balance()
         self._check_e_balance()
 
+    def print_model(self):
+        print("Metabolites:")
+        print(self.m_df)
+        print("Stoichiometries:")
+        print(self.S_df)
+
     def __repr__(self):
         return f"LinearRespirationModel({self.m_df}, {self.S_df})"
     
@@ -64,6 +70,7 @@ class LinearRespirationModel(object):
         self.m_Da = self.m_kDa*1000
         self.processes = self.S_df.index.values
         self.n_processes = self.S_df.index.size
+        self.n_met = self.m_df.index.size
 
     def _check_c_balance(self):
         c_bal = np.round(self.S @ self.m_df.NC, decimals=1)
@@ -148,12 +155,16 @@ class LinearRespirationModel(object):
         self._check_c_balance()
         self._check_e_balance()
     
-    def max_anabolic_rate_problem(self, phi_o=0.001, fix_lambda=False):
+    def max_anabolic_rate_problem(self, phi_o=0.001, fix_lambda=False, maint=None):
         """Construct an LP maximizing anabolic rate at fixed growth rate.
         
         Args:
             phi_o: fraction of biomass allocated to "other" processes.
                 default value is intentionally unrealistically low.
+            fix_lambda: if True, fixes the anabolic flux to a predetermined value.
+                Useful for sweeping lambda values.
+            maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
+                if None, defaults to 0. Typical values 10-20 mmol ATP/gDW/hr
 
         Returned problem has a parameters:
             lambda_hr: exponential growth rate in [1/hr] units
@@ -161,6 +172,7 @@ class LinearRespirationModel(object):
             ms: per-process enzyme mass [g/mol E]
         """
         n_proc = self.n_processes
+        n_met = self.n_met
         S = self.S
 
         # calculate per-process fluxes j_i, units of [mol C/gDW/s]
@@ -186,43 +198,38 @@ class LinearRespirationModel(object):
         obj = cp.Maximize(js[ana_idx])
         
         # Biomass production must balance dilution by growth at fixed mu 
-        # js are in units of mol C/gDW [/L/s]
-        # to convert we divide by ≈100 g/mol amino acids to get [mol/L] units.
-        # additionally, mu was provided in per-hour, but fluxes have per-s units.
-        per_s_conv = 1.0/3600
+        # js are in units of mol C/gDW/s
         lambda_hr = cp.Parameter(name='lambda_hr', nonneg=True)
 
         # Though the anabolic flux is in C units, if we assume the biomass
         # carbon fraction is fixed, then it exactly equals the growth rate.        
         ana_flux = js[ana_idx]
 
-        # Sets anabolic flux to a predetermined lambda.
-        # Useful for sweeping lambda values.
+        # Sets anabolic flux to a predetermined lambda_hr after converting to [1/s]
+        per_s_conv = 1.0/3600
         fixed_lambda = ana_flux - lambda_hr*per_s_conv
         
-        # I would prefer to balance the individual categories, but then
-        # I need to calcualte the per-category production, which requires
-        # me to multiply two variables: phi_i*translation_rate
-        
-        # phi_o catalyzes "homeostasis" flux which we take to represent maintenance
-        # S matrix defines ATP consumption stoich of homeostasis (1 ATP -> ADP).
-        # maintenance energy on glucose is ≈ 20 mmol ATP/gDW/hr (Hempfling & Maizner 1975)
-        # converting into flux units [mol ATP/gDW/s]
-        hom_idx = self.S_df.index.get_loc('ATP_homeostasis')
-        homeostasis_ATP_flux = -js[hom_idx]*self.S_df.at['ATP_homeostasis', 'ATP']  # ATP coeff is neg
-        min_ATP_consumption_s = 1e-3*20/3600
+        # Set up a minimum maintenance ATP expenditure constraint.
+        # maintenance energy on ≈ 10-20 mmol ATP/gDW/hr (Hempfling & Maizner 1975)
+        # converting into flux units [mol ATP/gDW/s] gives 1e-3*20/3600 = 5.6e-6
         # ^ double check above number
+        min_ATP_consumption_hr = maint or 0
+        min_ATP_consumption_s = 1e-3*min_ATP_consumption_hr/3600
+        ATP_index = self.m_df.index.get_loc('ATP')
+
+        # maintenance cost is uniformly zero for all metabolites other than ATP
+        m_vals = np.zeros(n_met)
+        m_vals[ATP_index] = min_ATP_consumption_s
+        m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
         
-        # add maintenance energy production constraint.
-        maintenance_constraint = homeostasis_ATP_flux >= min_ATP_consumption_s
-                
-        # Can only enforce balancing for internal metabolites, 
-        # but this means ATP, e- and C will be balanced internally
+        # Flux balance constraint, including ATP maintenance
         metab_flux_balance = S.T @ js
+        metab_flux_balance = metab_flux_balance - m
+
+        # Can only enforce balancing for internal metabolites.
         internal_mets = self.m_df.internal.values.copy()
         internal_metab_flux_balance = cp.multiply(metab_flux_balance, internal_mets)
         cons = [internal_metab_flux_balance == 0,
-                maintenance_constraint,
                 allocation_constr]
         if fix_lambda:
             cons.append(fixed_lambda == 0)
@@ -237,7 +244,7 @@ class LinearRespirationModel(object):
         returns:
             two-tuple of (lambda, problem object). lambda = 0 when infeasible.
         """
-        p = self.max_anabolic_rate_problem(phi_o)
+        p = self.max_anabolic_rate_problem(phi_o=phi_o)
         soln = p.solve()
         if p.status in ("infeasible", "unbounded"):
             return 0, p
