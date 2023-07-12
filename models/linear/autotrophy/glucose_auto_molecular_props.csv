@@ -1,0 +1,10 @@
+﻿,NC,NOSC,internal,note
+C_red,1,0,1,"reduced C, 1 C of intracellular glucose"
+C_ox,1,4,0,"oxidized carbon carrier ""CO2"""
+E_ox,1,0,0,"oxidized e- donor/acceptor, O2, has fictional NC for balancing"
+E_red,1,-4,0,"reduced donor/acceptor, 2 H2O, NC = 1 for balancing, 4 e- more reduced than O2 "
+EC,20,0,1,Oxidized two e- carrier with 20 carbons. 
+ECH,20,-0.1,1,"Reduced 2e- carrier, 20*-0.1 => 2 more e- than oxidized form."
+ADP,10,0,1,ADP
+ATP,10,0,1,ATP
+biomass,1,0,0,"Everything per C, default ZC = 0"
