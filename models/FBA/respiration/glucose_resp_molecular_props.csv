@@ -1,0 +1,10 @@
+﻿,NC,NOSC,internal,note
+nutrient,1,0,0,"extracellular ""glucose"""
+oxidized_product,1,4,0,"""CO2"""
+TEA,1,0,0,"O2, has fictional NC for balancing"
+reduced_TEA,1,-4,0,"2 H2O, NC = 1 for balancing, 4 e- more reduced than O2 "
+EC,20,0,1,Oxidized single e- carrier with 20 carbons. 
+ECH,20,-0.1,1,"Reduced 2e- carrier, 20*-0.1 => 2 more e- than oxidized form."
+ADP,10,0,1,ADP
+ATP,10,0,1,ATP
+biomass,1,0,0,"Everything per C, default ZC = 0"
