@@ -33,7 +33,7 @@ class LinearMetabolicModel(object):
         # Return an instance
         return cls(m_df, S_df.astype(dtype_dict))
     
-    def __init__(self, metabolites_df, S_df, ):
+    def __init__(self, metabolites_df, S_df):
         self.m_df = metabolites_df
         self.S_df = S_df
         
@@ -47,6 +47,9 @@ class LinearMetabolicModel(object):
         # check C and e- balancing
         self._check_c_balance()
         self._check_e_balance()
+
+    def copy(self):
+        return LinearMetabolicModel(self.m_df.copy(), self.S_df.copy())
 
     def print_model(self):
         print("Metabolites:")
@@ -155,25 +158,25 @@ class LinearMetabolicModel(object):
         self._check_c_balance()
         self._check_e_balance()
     
-    def max_anabolic_rate_problem(self, phi_o=0.001, fix_lambda=False, maint=None):
+    def max_anabolic_rate_problem(self, phi_o=0.001, max_lambda_hr=None, maint=None):
         """Construct an LP maximizing anabolic rate at fixed growth rate.
         
         Args:
             phi_o: fraction of biomass allocated to "other" processes.
                 default value is intentionally unrealistically low.
-            fix_lambda: if True, fixes the anabolic flux to a predetermined value.
-                Useful for sweeping lambda values.
+            max_lambda_hr: if not None, sets the maximum exponential
+                growth rate. In units of [1/hr].
             maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
                 if None, defaults to 0. Typical values 10-20 mmol ATP/gDW/hr
 
         Returned problem has a parameters:
-            lambda_hr: exponential growth rate in [1/hr] units
             ks: per-process rate constant [mol C/mol E/s] per protein
             ms: per-process enzyme mass [g/mol E]
+            phi_o: fraction of biomass allocated to "other" processes.
+            max_lambda_hr: exponential growth rate in [1/hr] units (if max_lambda=True)
         """
         n_proc = self.n_processes
         n_met = self.n_met
-        S = self.S
 
         # calculate per-process fluxes j_i, units of [mol C/gDW/s]
         # j_i = kcat_i * phi_i / m_i
@@ -193,21 +196,12 @@ class LinearMetabolicModel(object):
         # sum(phi_i) = 1 by defn
         allocation_constr = cp.sum(phis) == 1-phi_o
 
-        # maximize growth rate by maximization of anabolic flux
+        # Maximize the exponential growth rate by maximization of anabolic flux.
+        # Though the anabolic flux is in C/s units, if we assume the biomass
+        # carbon fraction is fixed, then it exactly equals the growth rate
         ana_idx = self.S_df.index.get_loc('anabolism')
-        obj = cp.Maximize(js[ana_idx])
-        
-        # Biomass production must balance dilution by growth at fixed mu 
-        # js are in units of mol C/gDW/s
-        lambda_hr = cp.Parameter(name='lambda_hr', nonneg=True)
-
-        # Though the anabolic flux is in C units, if we assume the biomass
-        # carbon fraction is fixed, then it exactly equals the growth rate.        
-        ana_flux = js[ana_idx]
-
-        # Sets anabolic flux to a predetermined lambda_hr after converting to [1/s]
-        per_s_conv = 1.0/3600
-        fixed_lambda = ana_flux - lambda_hr*per_s_conv
+        growth_rate_hr = js[ana_idx]*3600
+        obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
         
         # Set up a minimum maintenance ATP expenditure constraint.
         # maintenance energy on ≈ 10-20 mmol ATP/gDW/hr (Hempfling & Maizner 1975)
@@ -223,77 +217,70 @@ class LinearMetabolicModel(object):
         m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
         
         # Flux balance constraint, including ATP maintenance
-        metab_flux_balance = S.T @ js
-        metab_flux_balance = metab_flux_balance - m
+        metab_flux_balance = self.S.T @ js
+        if maint is not None:
+            metab_flux_balance = metab_flux_balance - m
 
         # Can only enforce balancing for internal metabolites.
         internal_mets = self.m_df.internal.values.copy()
         internal_metab_flux_balance = cp.multiply(metab_flux_balance, internal_mets)
         cons = [internal_metab_flux_balance == 0,
                 allocation_constr]
-        if fix_lambda:
-            cons.append(fixed_lambda == 0)
+        
+        if max_lambda_hr is not None:
+            # We were told to optimize at fixed per-hr growth rate
+            lambda_hr = cp.Parameter(name='max_lambda_hr', nonneg=True,
+                                     value=max_lambda_hr)
+            # Sets anabolic flux to given lambda_hr after converting to [1/s]
+            cons.append(js[ana_idx] <= lambda_hr/3600)
+
+        # Construct the problem and return
         return cp.Problem(obj, cons)
     
-    def maximize_lambda(self, phi_o=0.001):
+    def maximize_lambda(self, phi_o=0.001, max_lambda_hr=None, maint=None):
         """Maximize growth rate at fixed phi_o.
 
         Args:
             phi_o: minimum fraction of biomass allocated to "other" processes.
+            max_lambda_hr: if not None, sets the maximum exponential growth rate.
+                In units of [1/hr].
+            maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
 
         returns:
             two-tuple of (lambda, problem object). lambda = 0 when infeasible.
         """
-        p = self.max_anabolic_rate_problem(phi_o=phi_o)
+        p = self.max_anabolic_rate_problem(
+            phi_o=phi_o, max_lambda_hr=max_lambda_hr, maint=maint)
         soln = p.solve()
         if p.status in ("infeasible", "unbounded"):
             return 0, p
         
-        lam_val = p.value*3600
-        return lam_val, p
+        # optimum has /hr units now.
+        return p.value, p
+    
+    def solution_as_dict(self, opt_p):
+        """Returns a dictionary of solution values for a solved problem."""
+        soln_dict = defaultdict(float)
+        has_opt = opt_p.status == 'optimal'
+        opt_val = 0
+        if has_opt:
+            opt_val = opt_p.value
+        max_lambda = opt_val*3600
 
-    def maximize_lambda_old(self, min_phi_o=0.001, lambda_min=0.05, lambda_max=5.16, lambda_step=0.1):
-        """Maximize growth rate at fixed phi_o.
+        soln_dict['lambda_hr'] = max_lambda
+        soln_dict['phi_o'] = opt_p.param_dict['phi_o'].value
 
-        Args:
-            min_phi_o: minimum fraction of biomass allocated to "other" processes.
-            lambda_min: minimum lambda to test
-            lambda_max: maximum lambda to test
-            lambda_step: step size for lambda maximization
-        """
-        increasing_lams = np.arange(lambda_min, lambda_max, lambda_step)
-        lam_argmax = -1
-        last_infeasible = False
-        infeasible_ct = 0 
-        p = self.max_anabolic_rate_problem(min_phi_o)
-        
-        # Increasing order of lambda [1/hr]
-        for lam_val in increasing_lams:
-            p.param_dict['lambda_hr'].value = lam_val
-            soln = p.solve()
-            if p.status in ("infeasible", "unbounded"):
-                infeasible_ct += 1
-                # Save a little computation by bailing if 
-                # it seems like we have reached infeasible growth rates
-                if infeasible_ct > 3 and last_infeasible:
-                    break
-                last_infeasible = True
-                continue
-            
-            lam_argmax = lam_val
-        
-        # check sentinel
-        if lam_argmax == -1:
-            return None
-            
-        # second pass downward from an infeasible point (best mu + step size)
-        # this way we can stop at the first feasible solution and 
-        # return the maximal mu and the solved problem with solution state
-        epsilon = lambda_step/10
-        decreasing_lams = np.arange(lam_argmax+lambda_step, lam_argmax, -epsilon)
-        for lam_val in decreasing_lams:
-            p.param_dict['lambda_hr'].value = lam_val
-            soln = p.solve()
-            if p.status not in ("infeasible", "unbounded"):
-                return lam_val, p
+        ks = opt_p.param_dict['ks'].value
+        ms = opt_p.param_dict['ms'].value
+        phis = opt_p.var_dict['phis'].value
+        if not has_opt:
+            phis = np.zeros(self.n_processes)
+        js = ks*phis/ms
+
+        for pname, my_phi, my_j in zip(self.processes, phis, js):
+            soln_dict[pname + '_phi'] = my_phi
+            soln_dict[pname + '_flux'] = my_j
+
+        return soln_dict
+
             
