@@ -276,6 +276,18 @@ class LinearMetabolicModel(object):
         # optimum has /hr units now.
         return p.value, p
     
+    def model_as_dict(self):
+        """Returns a dictionary of model parameters."""
+        soln_dict = defaultdict(float)
+        for pname, k, m in zip(self.processes, self.kcat_s, self.m_kDa):
+            soln_dict[pname + '_kcat_s'] = k
+            soln_dict[pname + '_m_kDa'] = m
+        soln_dict['ZCB'] = self.ZCB
+        soln_dict['ZCorg'] = self.ZCorg
+        soln_dict['ZCprod'] = self.ZCprod
+        soln_dict['S6'] = self.get_S6()
+        return soln_dict
+
     def solution_as_dict(self, opt_p):
         """Returns a dictionary of solution values for a solved problem."""
         soln_dict = defaultdict(float)
