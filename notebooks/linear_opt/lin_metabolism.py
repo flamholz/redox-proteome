@@ -158,12 +158,17 @@ class LinearMetabolicModel(object):
         self._check_c_balance()
         self._check_e_balance()
     
-    def max_anabolic_rate_problem(self, phi_o=0.001, max_lambda_hr=None, maint=None):
+    def max_anabolic_rate_problem(self, phi_o=None,
+                                  min_phi_o=None,
+                                  max_lambda_hr=None,
+                                  maint=None):
         """Construct an LP maximizing anabolic rate at fixed growth rate.
         
         Args:
-            phi_o: fraction of biomass allocated to "other" processes.
-                default value is intentionally unrealistically low.
+            phi_o: if not null, exact fraction of biomass allocated
+                to "other" processes.
+            min_phi_o: if not null, minimum fraction of biomass allocated
+                to "other" processes.
             max_lambda_hr: if not None, sets the maximum exponential
                 growth rate. In units of [1/hr].
             maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
@@ -175,15 +180,24 @@ class LinearMetabolicModel(object):
             phi_o: fraction of biomass allocated to "other" processes.
             max_lambda_hr: exponential growth rate in [1/hr] units (if max_lambda=True)
         """
+        assert phi_o is None or min_phi_o is None, "Can't set both phi_o and min_phi_o"
+
         n_proc = self.n_processes
         n_met = self.n_met
+
+        constraints = []
 
         # calculate per-process fluxes j_i, units of [mol C/gDW/s]
         # j_i = kcat_i * phi_i / m_i
         # phi_i: biomass fraction [unitless]
         # have a phi for each process, plus one for "other"
         phis = cp.Variable(name='phis', shape=n_proc, nonneg=True)
-        phi_o = cp.Parameter(name='phi_o', value=phi_o, nonneg=True)
+        if phi_o is not None:
+            phi_o = cp.Parameter(name='phi_o', value=phi_o, nonneg=True)
+        elif min_phi_o is not None:
+            min_phi_o_param = cp.Parameter(name='min_phi_o', value=min_phi_o, nonneg=True)
+            phi_o = cp.Variable(name='phi_o', nonneg=True)
+            constraints.append(phi_o >= min_phi_o_param)
 
         # kcat: effective rate constant for process i, [mol C/mol E/s]
         ks = cp.Parameter(name='ks', shape=n_proc, value=self.kcat_s, pos=True)
@@ -195,6 +209,7 @@ class LinearMetabolicModel(object):
 
         # sum(phi_i) = 1 by defn
         allocation_constr = cp.sum(phis) == 1-phi_o
+        constraints.append(allocation_constr)
 
         # Maximize the exponential growth rate by maximization of anabolic flux.
         # Though the anabolic flux is in C/s units, if we assume the biomass
@@ -224,24 +239,26 @@ class LinearMetabolicModel(object):
         # Can only enforce balancing for internal metabolites.
         internal_mets = self.m_df.internal.values.copy()
         internal_metab_flux_balance = cp.multiply(metab_flux_balance, internal_mets)
-        cons = [internal_metab_flux_balance == 0,
-                allocation_constr]
+        constraints.append(internal_metab_flux_balance == 0)
         
         if max_lambda_hr is not None:
             # We were told to optimize at fixed per-hr growth rate
             lambda_hr = cp.Parameter(name='max_lambda_hr', nonneg=True,
                                      value=max_lambda_hr)
             # Sets anabolic flux to given lambda_hr after converting to [1/s]
-            cons.append(js[ana_idx] <= lambda_hr/3600)
+            constraints.append(js[ana_idx] <= lambda_hr/3600)
 
         # Construct the problem and return
-        return cp.Problem(obj, cons)
+        return cp.Problem(obj, constraints)
     
-    def maximize_lambda(self, phi_o=0.001, max_lambda_hr=None, maint=None):
+    def maximize_lambda(self, phi_o=None, min_phi_o=None, max_lambda_hr=None, maint=None):
         """Maximize growth rate at fixed phi_o.
 
         Args:
-            phi_o: minimum fraction of biomass allocated to "other" processes.
+            phi_o: if not None, sets the exact fraction of biomass
+                allocated to "other" processes.
+            min_phi_o: if not None, sets the minimum fraction of biomass
+                allocated to "other" processes.
             max_lambda_hr: if not None, sets the maximum exponential growth rate.
                 In units of [1/hr].
             maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
@@ -250,7 +267,8 @@ class LinearMetabolicModel(object):
             two-tuple of (lambda, problem object). lambda = 0 when infeasible.
         """
         p = self.max_anabolic_rate_problem(
-            phi_o=phi_o, max_lambda_hr=max_lambda_hr, maint=maint)
+            phi_o=phi_o, min_phi_o=min_phi_o,
+            max_lambda_hr=max_lambda_hr, maint=maint)
         soln = p.solve()
         if p.status in ("infeasible", "unbounded"):
             return 0, p
@@ -265,10 +283,16 @@ class LinearMetabolicModel(object):
         opt_val = 0
         if has_opt:
             opt_val = opt_p.value
-        max_lambda = opt_val*3600
+        max_lambda = opt_val
 
         soln_dict['lambda_hr'] = max_lambda
-        soln_dict['phi_o'] = opt_p.param_dict['phi_o'].value
+        if 'max_lambda_hr' in opt_p.param_dict:
+            soln_dict['max_lambda_hr'] = opt_p.param_dict['max_lambda_hr'].value
+        if 'phi_o' in opt_p.param_dict:
+            soln_dict['phi_o'] = opt_p.param_dict['phi_o'].value
+        elif 'phi_o' in opt_p.var_dict:
+            soln_dict['phi_o'] = opt_p.var_dict['phi_o'].value
+            soln_dict['min_phi_o'] = opt_p.param_dict['min_phi_o'].value
 
         ks = opt_p.param_dict['ks'].value
         ms = opt_p.param_dict['ms'].value
