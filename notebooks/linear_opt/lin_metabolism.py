@@ -145,6 +145,17 @@ class LinearMetabolicModel(object):
         self._update_S()
         self._check_c_balance()
         self._check_e_balance()
+
+    def set_process_masses(self, new_mass):
+        """Sets the mass of enzyme required for all processes.
+
+        Args:
+            new_mass: float new mass in kDa
+        """
+        self.S_df.at[:, 'm_kDa'] = new_mass
+        self._update_S()
+        self._check_c_balance()
+        self._check_e_balance()
     
     def set_process_kcat(self, process, new_kcat_s):
         """Sets the kcat of a process -- max rate of catalysis per active site.
@@ -285,7 +296,16 @@ class LinearMetabolicModel(object):
         soln_dict['ZCB'] = self.ZCB
         soln_dict['ZCorg'] = self.ZCorg
         soln_dict['ZCprod'] = self.ZCprod
+        
+        # Return the stoichiometries as positive values since this 
+        # is assumed in the model definition and analytics.
+        soln_dict['S1'] = self.S_df.at['oxidation','ECH']
+        soln_dict['S2'] = self.S_df.at['reduction','EC']
+        soln_dict['S3'] = self.S_df.at['oxidation','ATP']
+        soln_dict['S4'] = self.S_df.at['reduction','ATP']
+        soln_dict['S5'] = self.S_df.at['anabolism','ADP']
         soln_dict['S6'] = self.get_S6()
+        
         return soln_dict
 
     def solution_as_dict(self, opt_p):
