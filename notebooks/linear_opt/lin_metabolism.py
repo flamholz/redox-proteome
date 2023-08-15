@@ -11,6 +11,114 @@ allocation in a simple 3 half reaction model of a single metabolism.
 
 __author__ = "Avi I. Flamholz"
 
+# Constants
+# Cell mass density assumed constant.
+RHO_CELL = 1000.0 # g/L
+# molar mass of a carbon atom  
+MW_C_ATOM = 12.0    
+S_PER_HR = 60*60 
+
+# 70%  of cell mass is water, 30% other stuff. 
+WATER_FRACTION = 0.7
+DW_FRACTION = 1-WATER_FRACTION
+# gDW per gC -- dry mass is 50% carbo. 
+GDW_PER_G_C = 2                   
+# g cells per g carbon
+GCELL_PER_GC = GDW_PER_G_C/DW_FRACTION  
+              
+class RateLawFunctor(object):
+    """Abstract base class for rate law functors."""
+
+    ORDER = None
+
+    def Apply(self, S, processes, metabolites, gammas, phis, concs):
+        """Applies the rate law to the given concentrations.
+
+        Args:
+            S: numpy array, stoichiometric matrix.
+            processes: pd.Series, process names in order of S.
+            metabolites: pd.Series, metabolite names in order of S.
+            gammas: numpy array, gamma values.
+            phis: numpy array, phi values.
+            concs: numpy array, concentrations.
+
+        Returns:
+            numpy array, reaction fluxes.
+        """
+        raise NotImplementedError
+    
+
+class ZerothOrderRateLaw(RateLawFunctor):
+    """Zeroth order rate law. 
+
+    Flux is independent of the concentrations of the reactants.
+    """
+    ORDER = 0
+
+    def Apply(self, S, processes, metabolites, gammas, phis, concs):
+        return cp.multiply(gammas, phis)
+    
+
+class GrowthRateOptParams(object):
+    """A class to hold the parameters for the growth rate optimization problem.
+
+    Attributes:
+        do_dilution: boolean, whether to include dilution in the model.
+        do_maintenance: boolean, whether to include maintenance in the model.
+        rate_law: RateLawFunctor, rate law to use.
+        min_phi_O: float, minimum mass fraction for other processes.
+        phi_O: float, mass fraction for other processes.
+            Only one of min_phi_O and phi_O should be set.
+        maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
+                These are typically reported units for convenience.
+        ATP_maint: float, maintenance in units of [molar ATP/s].
+        max_lambda_hr: float, maximum lambda value. Units of [1/hr].
+        fixed_ATP: float, fixed ATP concentration. [mol/L] units.
+        fixed_NADH: float, fixed NADH concentration. [mol/L] units.
+    """
+    def __init__(self, do_dilution=False, rate_law=None,
+                 min_phi_O=None, phi_O=None,
+                 maintenance_cost=0, max_lambda_hr=None,
+                 fixed_ATP=None, fixed_NADH=None):
+        """Initializes the GrowthRateOptParams class.
+
+        Args:
+            do_dilution: boolean, whether to include dilution in the model.
+            rate_law: RateLawFunctor, rate law to use. If None, uses zeroth order.
+            min_phi_O: float, minimum mass fraction for other processes.
+            phi_O: float, mass fraction for other processes.
+                Only one of min_phi_O and phi_O should be set.
+            maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
+                These are typically reported units for convenience.
+            max_lambda_hr: float, maximum lambda value. Units of [1/hr].
+            fixed_ATP: float, fixed ATP concentration. [mol/L] units.
+            fixed_NADH: float, fixed NADH concentration. [mol/L] units.
+        """
+        msg = "Only one of min_phi_O and phi_O should be set."
+        assert (min_phi_O is None) or (phi_O is None), msg
+
+        if do_dilution:
+            msg = "Must define concentrations for dilution"
+            assert (fixed_ATP is not None) and (fixed_NADH is not None), msg
+
+        self.rate_law = rate_law or ZerothOrderRateLaw()
+        if self.rate_law.ORDER > 0:
+            msg = "Concentration dependent rate laws require ATP and NADH concentrations."
+            assert (fixed_ATP is not None) and (fixed_NADH is not None), msg
+
+        self.do_dilution = do_dilution
+        self.min_phi_O = min_phi_O or 0
+        self.phi_O = phi_O
+        self.max_lambda_hr = max_lambda_hr
+        self.fixed_ATP = fixed_ATP or 0
+        self.fixed_NADH = fixed_NADH or 0
+
+        # Convert maintenance molar ATP/s
+        self.maintenance_cost = maintenance_cost or 0
+        m = 1e-3*(self.maintenance_cost)*S_PER_HR   # mol ATP/gDW/s
+        # mol ATP/gDW/s * gDW/g cell * g cell/L = molar ATP/s
+        self.ATP_maint = m * DW_FRACTION * RHO_CELL
+        
 
 class LinearMetabolicModel(object):
     """Coarse-grained linear model of resource allocation while balancing ATP and e- fluxes."""
@@ -169,153 +277,112 @@ class LinearMetabolicModel(object):
         self._update_S()
         self._check_c_balance()
         self._check_e_balance()
-    
-    def max_anabolic_rate_problem(self, phi_o=None,
-                                  min_phi_o=None,
-                                  max_lambda_hr=None,
-                                  fixed_ATP=None,
-                                  fixed_NADH=None,
-                                  maint=None):
-        """Construct an LP maximizing anabolic rate at fixed growth rate.
 
-        Here we are assuming all processes are zero-order in substrate concentrations,
-        i.e. saturated with substrate in the Michaelis-Menten sense. So if a fixed
-        ATP or NADH concentration is given, we use it to account for dilution, but it 
-        does not affect other fluxes.
+    def max_growth_rate_problem(self, gr_opt_params):
+        """Construct an LP maximizing the growth rate lambda.
+        
+        TODO: make the output problem DCP-compliant.
+            https://www.cvxpy.org/tutorial/dcp/index.html#dcp
 
         Args:
-            phi_o: if not null, exact fraction of biomass allocated
-                to "other" processes.
-            min_phi_o: if not null, minimum fraction of biomass allocated
-                to "other" processes.
-            max_lambda_hr: if not None, sets the maximum exponential
-                growth rate. In units of [1/hr].
-            fixed_ATP: if not None, sets the ATP concentration to a fixed value.
-            fixed_NADH: if not None, sets the NADH concentration to a fixed value.
-            maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
-                if None, defaults to 0. Typical values 10-20 mmol ATP/gDW/hr
+            gr_opt_params: a GrowthRateOptimizationParams object.
 
-        Returned problem has a parameters:
-            ks: per-process rate constant [mol C/mol E/s] per protein
-            ms: per-process enzyme mass [g/mol E]
-            phi_o: fraction of biomass allocated to "other" processes.
-            max_lambda_hr: exponential growth rate in [1/hr] units (if max_lambda=True)
-            fixed_ATP: fixed ATP concentration [KM units]
-            fixed_NADH: fixed NADH concentration [KM units]
-            maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
+        Returns:
+            A cvxpy Problem object. Returned problem has a parameters:
+                ks: per-process rate constant [mol C/mol E/s] per protein
+                ms: per-process enzyme mass [g/mol E]
+                phi_o: fraction of biomass allocated to "other" processes.
+                max_lambda_hr: exponential growth rate in [1/hr] units (if max_lambda=True)
+                fixed_ATP: fixed ATP concentration [KM units]
+                fixed_NADH: fixed NADH concentration [KM units]
+                maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
         """
-        assert phi_o is None or min_phi_o is None, "Can't set both phi_o and min_phi_o"
-
         n_proc = self.n_processes
         n_met = self.n_met
+        params = gr_opt_params
 
         constraints = []
-
-        # calculate per-process fluxes j_i, units of [mol C/gDW/s]
-        # j_i = kcat_i * phi_i / m_i
-        # phi_i: biomass fraction [unitless]
-        # have a phi for each process, plus one for "other"
         phis = cp.Variable(name='phis', shape=n_proc, nonneg=True)
-        if phi_o is not None:
-            phi_o = cp.Parameter(name='phi_o', value=phi_o, nonneg=True)
-        elif min_phi_o is not None:
-            min_phi_o_param = cp.Parameter(name='min_phi_o', value=min_phi_o, nonneg=True)
-            phi_o = cp.Variable(name='phi_o', nonneg=True)
-            constraints.append(phi_o >= min_phi_o_param)
-
-        # kcat: effective rate constant for process i, [mol C/mol E/s]
-        ks = cp.Parameter(name='ks', shape=n_proc, value=self.kcat_s, pos=True)
-        # ms: per-process enzyme mass [g/mol E]
-        ms = cp.Parameter(name='ms', shape=n_proc, value=self.m_Da, pos=True)
-        # ns: per-metabolite carbon number [mol C/mol M]
-        ncs = cp.Parameter(name='ncs', shape=n_met, value=self.NC, pos=True)
-
-        # vector of fluxes j_i, note that the last phi is phi_o that has no rate law.
-        js = cp.multiply(ks, phis) / ms
-
-        # sum(phi_i) = 1 by defn
-        allocation_constr = cp.sum(phis) == 1-phi_o
+        if params.phi_O is not None:
+            my_phi_O = cp.Parameter(
+                name='phi_O', value=params.phi_O, nonneg=True)
+        elif params.min_phi_O is not None:
+            min_phi_O_param = cp.Parameter(
+                name='min_phi_O', value=params.min_phi_O, nonneg=True)
+            my_phi_O = cp.Variable(name='phi_O', nonneg=True)
+            constraints.append(my_phi_O >= min_phi_O_param)
+        
+        # Allocation constraint: sum(phi_i) = 1 by defn
+        allocation_constr = cp.sum(phis) == 1-my_phi_O
         constraints.append(allocation_constr)
 
-        # Maximize the exponential growth rate by maximization of anabolic flux.
-        # Though the anabolic flux is in C/s units, if we assume the biomass
-        # carbon fraction is fixed, then it exactly equals the growth rate
-        ana_idx = self.S_df.index.get_loc('anabolism')
-        g_c_per_g_cell = 12*2
-        s_per_hr = 3600
-        growth_rate_hr = js[ana_idx]*s_per_hr*g_c_per_g_cell
-        obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
-        
-        # Set up a minimum maintenance ATP expenditure constraint.
-        # maintenance energy on ≈ 10-20 mmol ATP/gDW/hr (Hempfling & Maizner 1975)
-        # converting into flux units [mol ATP/gDW/s] gives 1e-3*20/3600 = 5.6e-6
-        # ^ double check above number
-        min_ATP_consumption_hr = maint or 0
-        min_ATP_consumption_s = 1e-3*min_ATP_consumption_hr/3600
+        # gamma = kcat / m on the assumption that yields are 1.
+        # kcat_s: effective rate constant for process i, [mol C/mol E/s]
+        # mcat_Da: per-process enzyme mass [g/mol E]
+        # TODO: I think we can ignore NC since it's absorbed in the kcat. Check.
+        gamma_vals = self.kcat_s / self.m_Da
+        gammas = cp.Parameter(
+            name='gammas', shape=n_proc, value=gamma_vals, pos=True)
+
+        # Internal metabolites like ATP and NADH must have concentrations 
+        # if we want to account for dilution and/or concentration-dependent fluxes.
+        c_vals = np.zeros(n_met)
         ATP_index = self.m_df.index.get_loc('ATP')
         NADH_index = self.m_df.index.get_loc('ECH')
+        c_vals[ATP_index] = params.fixed_ATP
+        c_vals[NADH_index] = params.fixed_NADH
+        concs = cp.Parameter(
+            name='concs', shape=n_met, nonneg=True, value=c_vals)
+
+        # Calculate fluxes using on the rate law functor.
+        # TODO: pass in the stoichioemtric matrix and metabolite names. 
+        Js = params.rate_law.Apply(None, None, None, gammas, phis, concs)
+
+        # Maximize the exponential growth rate by maximizing anabolic flux.
+        # Though these are proportional, we convert units so opt has units of [1/hr].
+        # J_ana has units of [number C/g/s], so we multiply by the mass of a C atom
+        # and the ratio of grams cell per gram C. Finally we convert /s to /hr.
+        # If we assume the biomass C fraction is fixed, this exactly equals the growth rate
+        ana_idx = self.S_df.index.get_loc('anabolism')   
+        growth_rate_s = Js[ana_idx]*GCELL_PER_GC*MW_C_ATOM     
+        growth_rate_hr = growth_rate_s*S_PER_HR
+        obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
 
         # maintenance cost is uniformly zero for all metabolites other than ATP
         m_vals = np.zeros(n_met)
-        m_vals[ATP_index] = min_ATP_consumption_s
+        m_vals[ATP_index] = params.ATP_maint
         m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
-        
-        # only ATP and NADH can have concentrations, which are used only for dilution 
-        c_vals = np.zeros(n_met)
-        ATP_conc = fixed_ATP or 0
-        NADH_conc = fixed_NADH or 0
-        c_vals[ATP_index] = ATP_conc
-        c_vals[NADH_index] = NADH_conc
-        c = cp.Parameter(name='concs', shape=n_met, nonneg=True, value=c_vals)
 
         # Flux balance constraint, including ATP maintenance and dilution if needed.
-        # Since J_ana = lambda, dilution term is -C*J_ana
-        lam = js[ana_idx]/g_c_per_g_cell
-        rho = 1000 # [g/L]
-        metab_flux_balance = rho*(self.S.T @ js)/ncs - cp.multiply(lam, c) - m
+        metab_flux_balance = RHO_CELL*(self.S.T @ Js) - m
+        if params.do_dilution:
+            # Using growth rate in /s here to match units of fluxes.
+            metab_flux_balance = (
+                metab_flux_balance - cp.multiply(growth_rate_s, concs))
 
         # Can only enforce balancing for internal metabolites.
         internal_mets = self.m_df.internal.values.copy()
         internal_metab_flux_balance = cp.multiply(metab_flux_balance, internal_mets)
         constraints.append(internal_metab_flux_balance == 0)
         
-        if max_lambda_hr is not None:
-            # We were told to optimize at fixed per-hr growth rate
-            lambda_hr = cp.Parameter(name='max_lambda_hr', nonneg=True,
-                                     value=max_lambda_hr)
-            # Sets anabolic flux to given lambda_hr after converting to [1/s]
-            constraints.append(growth_rate_hr <= lambda_hr)
+        if params.max_lambda_hr:
+            lambda_hr_ub = cp.Parameter(name='max_lambda_hr', nonneg=True,
+                                        value=params.max_lambda_hr)
+            constraints.append(growth_rate_hr <= lambda_hr_ub)
 
         # Construct the problem and return
         return cp.Problem(obj, constraints)
     
-    def maximize_lambda(self, phi_o=None,
-                        min_phi_o=None,
-                        max_lambda_hr=None,
-                        fixed_ATP=None,
-                        fixed_NADH=None,
-                        maint=None):
+    def maximize_growth_rate(self, gr_opt_params):
         """Maximize growth rate at fixed phi_o.
 
         Args:
-            phi_o: if not None, sets the exact fraction of biomass
-                allocated to "other" processes.
-            min_phi_o: if not None, sets the minimum fraction of biomass
-                allocated to "other" processes.
-            max_lambda_hr: if not None, sets the maximum exponential growth rate.
-                In units of [1/hr].
-            fixed_ATP: if not None, sets the ATP concentration to a fixed value.
-            fixed_NADH: if not None, sets the NADH concentration to a fixed value.
-            maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
+            gr_opt_params: a GrowthRateOptParams object.
 
         returns:
             two-tuple of (lambda, problem object). lambda = 0 when infeasible.
         """
-        p = self.max_anabolic_rate_problem(
-            phi_o=phi_o, min_phi_o=min_phi_o,
-            max_lambda_hr=max_lambda_hr,
-            fixed_ATP=fixed_ATP, fixed_NADH=fixed_NADH,
-            maint=maint)
+        p = self.max_growth_rate_problem(gr_opt_params)
         soln = p.solve()
         if p.status in ("infeasible", "unbounded"):
             return 0, p
@@ -325,25 +392,25 @@ class LinearMetabolicModel(object):
     
     def model_as_dict(self):
         """Returns a dictionary of model parameters."""
-        soln_dict = defaultdict(float)
+        model_dict = defaultdict(float)
         for pname, k, m in zip(self.processes, self.kcat_s, self.m_kDa):
-            soln_dict[pname + '_kcat_s'] = k
-            soln_dict[pname + '_m_kDa'] = m
-            soln_dict[pname + '_gamma'] = k/(m*1000)          
-        soln_dict['ZCB'] = self.ZCB
-        soln_dict['ZCorg'] = self.ZCorg
-        soln_dict['ZCprod'] = self.ZCprod
+            model_dict[pname + '_kcat_s'] = k
+            model_dict[pname + '_m_kDa'] = m
+            model_dict[pname + '_gamma'] = k/(m*1000)          
+        model_dict['ZCB'] = self.ZCB
+        model_dict['ZCorg'] = self.ZCorg
+        model_dict['ZCprod'] = self.ZCprod
         
         # Return the stoichiometries as positive values since this 
         # is assumed in the model definition and analytics.
-        soln_dict['S1'] = self.S_df.at['oxidation','ECH']
-        soln_dict['S2'] = self.S_df.at['reduction','EC']
-        soln_dict['S3'] = self.S_df.at['oxidation','ATP']
-        soln_dict['S4'] = self.S_df.at['reduction','ATP']
-        soln_dict['S5'] = self.S_df.at['anabolism','ADP']
-        soln_dict['S6'] = self.get_S6()
+        model_dict['S1'] = self.S_df.at['oxidation','ECH']
+        model_dict['S2'] = self.S_df.at['reduction','EC']
+        model_dict['S3'] = self.S_df.at['oxidation','ATP']
+        model_dict['S4'] = self.S_df.at['reduction','ATP']
+        model_dict['S5'] = self.S_df.at['anabolism','ADP']
+        model_dict['S6'] = self.get_S6()
         
-        return soln_dict
+        return model_dict
 
     def solution_as_dict(self, opt_p):
         """Returns a dictionary of solution values for a solved problem."""
@@ -366,14 +433,14 @@ class LinearMetabolicModel(object):
             soln_dict['phi_o'] = opt_p.var_dict['phi_o'].value
             soln_dict['min_phi_o'] = opt_p.param_dict['min_phi_o'].value
 
-        ks = opt_p.param_dict['ks'].value
-        ms = opt_p.param_dict['ms'].value
+        gammas = opt_p.param_dict['gammas'].value
         phis = opt_p.var_dict['phis'].value
         if not has_opt:
             phis = np.zeros(self.n_processes)
-        js = ks*phis/ms
+        js = gammas*phis
 
-        for pname, my_phi, my_j in zip(self.processes, phis, js):
+        for pname, my_g, my_phi, my_j in zip(self.processes, gammas, phis, js):
+            soln_dict[pname + '_gamma'] = my_g
             soln_dict[pname + '_phi'] = my_phi
             soln_dict[pname + '_flux'] = my_j
 
