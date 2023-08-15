@@ -71,6 +71,7 @@ class LinearMetabolicModel(object):
         # masses have units of kg/mol enz
         self.m_kDa = self.S_df['m_kDa'].values
         self.m_Da = self.m_kDa*1000
+        self.NC = self.m_df.NC.values
         self.processes = self.S_df.index.values
         self.n_processes = self.S_df.index.size
         self.n_met = self.m_df.index.size
@@ -172,9 +173,16 @@ class LinearMetabolicModel(object):
     def max_anabolic_rate_problem(self, phi_o=None,
                                   min_phi_o=None,
                                   max_lambda_hr=None,
+                                  fixed_ATP=None,
+                                  fixed_NADH=None,
                                   maint=None):
         """Construct an LP maximizing anabolic rate at fixed growth rate.
-        
+
+        Here we are assuming all processes are zero-order in substrate concentrations,
+        i.e. saturated with substrate in the Michaelis-Menten sense. So if a fixed
+        ATP or NADH concentration is given, we use it to account for dilution, but it 
+        does not affect other fluxes.
+
         Args:
             phi_o: if not null, exact fraction of biomass allocated
                 to "other" processes.
@@ -182,6 +190,8 @@ class LinearMetabolicModel(object):
                 to "other" processes.
             max_lambda_hr: if not None, sets the maximum exponential
                 growth rate. In units of [1/hr].
+            fixed_ATP: if not None, sets the ATP concentration to a fixed value.
+            fixed_NADH: if not None, sets the NADH concentration to a fixed value.
             maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
                 if None, defaults to 0. Typical values 10-20 mmol ATP/gDW/hr
 
@@ -190,6 +200,9 @@ class LinearMetabolicModel(object):
             ms: per-process enzyme mass [g/mol E]
             phi_o: fraction of biomass allocated to "other" processes.
             max_lambda_hr: exponential growth rate in [1/hr] units (if max_lambda=True)
+            fixed_ATP: fixed ATP concentration [KM units]
+            fixed_NADH: fixed NADH concentration [KM units]
+            maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
         """
         assert phi_o is None or min_phi_o is None, "Can't set both phi_o and min_phi_o"
 
@@ -212,8 +225,10 @@ class LinearMetabolicModel(object):
 
         # kcat: effective rate constant for process i, [mol C/mol E/s]
         ks = cp.Parameter(name='ks', shape=n_proc, value=self.kcat_s, pos=True)
-        # m: per-process enzyme mass [g/mol E]
+        # ms: per-process enzyme mass [g/mol E]
         ms = cp.Parameter(name='ms', shape=n_proc, value=self.m_Da, pos=True)
+        # ns: per-metabolite carbon number [mol C/mol M]
+        ncs = cp.Parameter(name='ncs', shape=n_met, value=self.NC, pos=True)
 
         # vector of fluxes j_i, note that the last phi is phi_o that has no rate law.
         js = cp.multiply(ks, phis) / ms
@@ -226,7 +241,9 @@ class LinearMetabolicModel(object):
         # Though the anabolic flux is in C/s units, if we assume the biomass
         # carbon fraction is fixed, then it exactly equals the growth rate
         ana_idx = self.S_df.index.get_loc('anabolism')
-        growth_rate_hr = js[ana_idx]*3600
+        g_c_per_g_cell = 12*2
+        s_per_hr = 3600
+        growth_rate_hr = js[ana_idx]*s_per_hr*g_c_per_g_cell
         obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
         
         # Set up a minimum maintenance ATP expenditure constraint.
@@ -236,16 +253,26 @@ class LinearMetabolicModel(object):
         min_ATP_consumption_hr = maint or 0
         min_ATP_consumption_s = 1e-3*min_ATP_consumption_hr/3600
         ATP_index = self.m_df.index.get_loc('ATP')
+        NADH_index = self.m_df.index.get_loc('ECH')
 
         # maintenance cost is uniformly zero for all metabolites other than ATP
         m_vals = np.zeros(n_met)
         m_vals[ATP_index] = min_ATP_consumption_s
         m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
         
-        # Flux balance constraint, including ATP maintenance
-        metab_flux_balance = self.S.T @ js
-        if maint is not None:
-            metab_flux_balance = metab_flux_balance - m
+        # only ATP and NADH can have concentrations, which are used only for dilution 
+        c_vals = np.zeros(n_met)
+        ATP_conc = fixed_ATP or 0
+        NADH_conc = fixed_NADH or 0
+        c_vals[ATP_index] = ATP_conc
+        c_vals[NADH_index] = NADH_conc
+        c = cp.Parameter(name='concs', shape=n_met, nonneg=True, value=c_vals)
+
+        # Flux balance constraint, including ATP maintenance and dilution if needed.
+        # Since J_ana = lambda, dilution term is -C*J_ana
+        lam = js[ana_idx]/g_c_per_g_cell
+        rho = 1000 # [g/L]
+        metab_flux_balance = rho*(self.S.T @ js)/ncs - cp.multiply(lam, c) - m
 
         # Can only enforce balancing for internal metabolites.
         internal_mets = self.m_df.internal.values.copy()
@@ -257,12 +284,17 @@ class LinearMetabolicModel(object):
             lambda_hr = cp.Parameter(name='max_lambda_hr', nonneg=True,
                                      value=max_lambda_hr)
             # Sets anabolic flux to given lambda_hr after converting to [1/s]
-            constraints.append(js[ana_idx] <= lambda_hr/3600)
+            constraints.append(growth_rate_hr <= lambda_hr)
 
         # Construct the problem and return
         return cp.Problem(obj, constraints)
     
-    def maximize_lambda(self, phi_o=None, min_phi_o=None, max_lambda_hr=None, maint=None):
+    def maximize_lambda(self, phi_o=None,
+                        min_phi_o=None,
+                        max_lambda_hr=None,
+                        fixed_ATP=None,
+                        fixed_NADH=None,
+                        maint=None):
         """Maximize growth rate at fixed phi_o.
 
         Args:
@@ -272,6 +304,8 @@ class LinearMetabolicModel(object):
                 allocated to "other" processes.
             max_lambda_hr: if not None, sets the maximum exponential growth rate.
                 In units of [1/hr].
+            fixed_ATP: if not None, sets the ATP concentration to a fixed value.
+            fixed_NADH: if not None, sets the NADH concentration to a fixed value.
             maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
 
         returns:
@@ -279,7 +313,9 @@ class LinearMetabolicModel(object):
         """
         p = self.max_anabolic_rate_problem(
             phi_o=phi_o, min_phi_o=min_phi_o,
-            max_lambda_hr=max_lambda_hr, maint=maint)
+            max_lambda_hr=max_lambda_hr,
+            fixed_ATP=fixed_ATP, fixed_NADH=fixed_NADH,
+            maint=maint)
         soln = p.solve()
         if p.status in ("infeasible", "unbounded"):
             return 0, p
@@ -293,6 +329,7 @@ class LinearMetabolicModel(object):
         for pname, k, m in zip(self.processes, self.kcat_s, self.m_kDa):
             soln_dict[pname + '_kcat_s'] = k
             soln_dict[pname + '_m_kDa'] = m
+            soln_dict[pname + '_gamma'] = k/(m*1000)          
         soln_dict['ZCB'] = self.ZCB
         soln_dict['ZCorg'] = self.ZCorg
         soln_dict['ZCprod'] = self.ZCprod
@@ -318,6 +355,9 @@ class LinearMetabolicModel(object):
         max_lambda = opt_val
 
         soln_dict['lambda_hr'] = max_lambda
+        soln_dict['maint'] = 0
+        if 'maint' in opt_p.param_dict:
+            soln_dict['maint'] = opt_p.param_dict['maint'].value
         if 'max_lambda_hr' in opt_p.param_dict:
             soln_dict['max_lambda_hr'] = opt_p.param_dict['max_lambda_hr'].value
         if 'phi_o' in opt_p.param_dict:
