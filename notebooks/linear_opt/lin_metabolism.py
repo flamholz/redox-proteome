@@ -25,7 +25,8 @@ DW_FRACTION = 1-WATER_FRACTION
 GDW_PER_G_C = 2                   
 # g cells per g carbon
 GCELL_PER_GC = GDW_PER_G_C/DW_FRACTION  
-              
+
+
 class RateLawFunctor(object):
     """Abstract base class for rate law functors."""
 
@@ -370,7 +371,7 @@ class LinearMetabolicModel(object):
         growth_rate_hr = growth_rate_s*S_PER_HR
         obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
 
-        # maintenance cost is uniformly zero for all metabolites other than ATP
+        # Maintenance is zero for all metabolites except ATP
         m_vals = np.zeros(n_met)
         m_vals[ATP_index] = params.ATP_maint
         m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
