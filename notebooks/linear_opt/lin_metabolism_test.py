@@ -1,7 +1,7 @@
 import unittest
 
 from linear_opt.lin_metabolism import GrowthRateOptParams, RateLawFunctor
-from linear_opt.lin_metabolism import LinearMetabolicModel
+from linear_opt.lin_metabolism import LinearMetabolicModel, SimpleFirstOrderRateLaw
 from os import path
 
 
@@ -73,6 +73,12 @@ class BasicModelTest(unittest.TestCase):
             self.assertTrue(p + "_gamma" in soln_dict)
             self.assertTrue(p + "_phi" in soln_dict)
             self.assertTrue(p + "_flux" in soln_dict)
+    
+    def testMaxGrowthRateFirstOrder(self):
+        # Optimize with default params
+        params = GrowthRateOptParams(rate_law=SimpleFirstOrderRateLaw(),
+                                     fixed_ATP=0.01, fixed_NADH=0.01)
+        optimum, problem = self.model.maximize_growth_rate(params)
 
     def testMaxGrowthRateDilution(self):
         params = GrowthRateOptParams(

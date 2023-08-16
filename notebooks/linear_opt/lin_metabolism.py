@@ -64,7 +64,9 @@ class ZerothOrderRateLaw(RateLawFunctor):
 class SimpleFirstOrderRateLaw(RateLawFunctor):
     """First order rate law. 
 
-    Flux depends on concentrations to the first power.
+    Fluxes depends on concentrations to the first power.
+
+    Here anabolism is first order in ATP and reduction is first order in NADH.
     """
     ORDER = 1
 
@@ -73,11 +75,21 @@ class SimpleFirstOrderRateLaw(RateLawFunctor):
         p_list = list(processes)
 
         ATP_index = m_list.index('ATP')
-        NADH_index = m_list.index('NADH')
+        NADH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
+        NAD_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
+        ana_index = p_list.index('anabolism')
+        ox_index = p_list.index('oxidation')
+        red_index = p_list.index('reduction')
 
-        # TODO: finish this
+        # binary matrix -- processes x metabolites -- indicating where ATP and NADH 
+        # are substrates. Note, for now each reaction can only have one substrate.
+        subs = np.zeros(S.shape)
+        subs[ana_index, ATP_index] = 1
+        subs[red_index, NADH_index] = 1
+        subs[ox_index, NAD_index] = 1
 
-        return cp.multiply(gammas, phis)
+        conc_term = subs @ concs
+        return cp.multiply(gammas, cp.multiply(phis, conc_term))
     
 
 class GrowthRateOptParams(object):
@@ -100,7 +112,8 @@ class GrowthRateOptParams(object):
     def __init__(self, do_dilution=False, rate_law=None,
                  min_phi_O=None, phi_O=None,
                  maintenance_cost=0, max_lambda_hr=None,
-                 fixed_ATP=None, fixed_NADH=None):
+                 fixed_ATP=None, fixed_NADH=None,
+                 fixed_ra=None, fixed_re=None):
         """Initializes the GrowthRateOptParams class.
 
         Args:
@@ -114,6 +127,8 @@ class GrowthRateOptParams(object):
             max_lambda_hr: float, maximum lambda value. Units of [1/hr].
             fixed_ATP: float, fixed ATP concentration. [mol/L] units.
             fixed_NADH: float, fixed NADH concentration. [mol/L] units.
+            fixed_re: float, fixed ratio of NAD/NADH concentrations.
+            fixed_ra: float, fixed ratio of ADP/ATP concentrations.
         """
         msg = "Only one of min_phi_O and phi_O should be set."
         assert (min_phi_O is None) or (phi_O is None), msg
@@ -132,7 +147,11 @@ class GrowthRateOptParams(object):
         self.phi_O = phi_O
         self.max_lambda_hr = max_lambda_hr
         self.fixed_ATP = fixed_ATP or 0
+        self.fixed_ra = fixed_ra or 0
+        self.fixed_ADP = self.fixed_ATP * self.fixed_ra
         self.fixed_NADH = fixed_NADH or 0
+        self.fixed_re = fixed_re or 0
+        self.fixed_NAD = self.fixed_NADH * self.fixed_re
 
         # Convert maintenance molar ATP/s
         self.maintenance_cost = maintenance_cost or 0
@@ -350,9 +369,13 @@ class LinearMetabolicModel(object):
         # if we want to account for dilution and/or concentration-dependent fluxes.
         c_vals = np.zeros(n_met)
         ATP_index = self.m_df.index.get_loc('ATP')
+        ADP_index = self.m_df.index.get_loc('ADP')
         NADH_index = self.m_df.index.get_loc('ECH')
+        NAD_index = self.m_df.index.get_loc('EC')
         c_vals[ATP_index] = params.fixed_ATP
+        c_vals[ADP_index] = params.fixed_ADP
         c_vals[NADH_index] = params.fixed_NADH
+        c_vals[NAD_index] = params.fixed_NAD
         concs = cp.Parameter(
             name='concs', shape=n_met, nonneg=True, value=c_vals)
 
@@ -376,7 +399,7 @@ class LinearMetabolicModel(object):
         m_vals[ATP_index] = params.ATP_maint
         m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
 
-        # Flux balance constraint, including ATP maintenance and dilution if needed.
+        # Flux balance constraint, including ATP maintenance and dilution if configured.
         metab_flux_balance = RHO_CELL*(self.S.T @ Js) - m
         if params.do_dilution:
             # Using growth rate in /s here to match units of fluxes.
