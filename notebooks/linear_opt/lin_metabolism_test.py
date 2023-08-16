@@ -28,7 +28,7 @@ class GrowthRateOptParamsTest(unittest.TestCase):
         # Double check unit conversion to molar/s
         # 1 mmol ATP/gDW/hr x 1e-3 mol/mmol x 0.3 gDW/g cell
         # x 1000 g cell / L cell x 1 hr / 3600 s = 1080 molar ATP/s
-        self.assertAlmostEqual(opt.ATP_maint, 1080.0)
+        self.assertAlmostEqual(opt.ATP_maint, 8.333e-5)
     
     def testBothPhiO(self):
         self.assertRaises(

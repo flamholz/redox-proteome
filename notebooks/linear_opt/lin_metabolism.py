@@ -115,7 +115,7 @@ class GrowthRateOptParams(object):
 
         # Convert maintenance molar ATP/s
         self.maintenance_cost = maintenance_cost or 0
-        m = 1e-3*(self.maintenance_cost)*S_PER_HR   # mol ATP/gDW/s
+        m = 1e-3*(self.maintenance_cost)/S_PER_HR   # mol ATP/gDW/s
         # mol ATP/gDW/s * gDW/g cell * g cell/L = molar ATP/s
         self.ATP_maint = m * DW_FRACTION * RHO_CELL
         
