@@ -80,6 +80,7 @@ class SimpleFirstOrderRateLaw(RateLawFunctor):
         ana_index = p_list.index('anabolism')
         ox_index = p_list.index('oxidation')
         red_index = p_list.index('reduction')
+        h_index = p_list.index('ATP_homeostasis')
 
         # binary matrix -- processes x metabolites -- indicating where ATP and NADH 
         # are substrates. Note, for now each reaction can only have one substrate.
@@ -87,6 +88,7 @@ class SimpleFirstOrderRateLaw(RateLawFunctor):
         subs[ana_index, ATP_index] = 1
         subs[red_index, NADH_index] = 1
         subs[ox_index, NAD_index] = 1
+        subs[h_index, ATP_index] = 1
 
         conc_term = subs @ concs
         return cp.multiply(gammas, cp.multiply(phis, conc_term))
