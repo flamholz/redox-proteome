@@ -36,6 +36,7 @@ class RateLawFunctor(object):
 
         Args:
             S: numpy array, stoichiometric matrix.
+                Reactions on rows, metabolites on cols. 
             processes: pd.Series, process names in order of S.
             metabolites: pd.Series, metabolite names in order of S.
             gammas: numpy array, gamma values.
@@ -56,6 +57,25 @@ class ZerothOrderRateLaw(RateLawFunctor):
     ORDER = 0
 
     def Apply(self, S, processes, metabolites, gammas, phis, concs):
+        return cp.multiply(gammas, phis)
+
+
+class SimpleFirstOrderRateLaw(RateLawFunctor):
+    """First order rate law. 
+
+    Flux depends on concentrations to the first power.
+    """
+    ORDER = 1
+
+    def Apply(self, S, processes, metabolites, gammas, phis, concs):
+        m_list = list(metabolites)
+        p_list = list(processes)
+
+        ATP_index = m_list.index('ATP')
+        NADH_index = m_list.index('NADH')
+
+        # TODO: finish this
+
         return cp.multiply(gammas, phis)
     
 
@@ -182,6 +202,7 @@ class LinearMetabolicModel(object):
         self.NC = self.m_df.NC.values
         self.processes = self.S_df.index.values
         self.n_processes = self.S_df.index.size
+        self.metabolites = self.m_df.index.values
         self.n_met = self.m_df.index.size
 
     def _check_c_balance(self):
@@ -336,7 +357,8 @@ class LinearMetabolicModel(object):
 
         # Calculate fluxes using on the rate law functor.
         # TODO: pass in the stoichioemtric matrix and metabolite names. 
-        Js = params.rate_law.Apply(None, None, None, gammas, phis, concs)
+        Js = params.rate_law.Apply(self.S, self.processes, self.metabolites,
+                                   gammas, phis, concs)
 
         # Maximize the exponential growth rate by maximizing anabolic flux.
         # Though these are proportional, we convert units so opt has units of [1/hr].
