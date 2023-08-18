@@ -1,7 +1,10 @@
 import unittest
 
 from linear_opt.lin_metabolism import GrowthRateOptParams, RateLawFunctor
-from linear_opt.lin_metabolism import LinearMetabolicModel, SimpleFirstOrderRateLaw
+from linear_opt.lin_metabolism import LinearMetabolicModel
+from linear_opt.lin_metabolism import SingleSubstrateFirstOrderRateLaw
+from linear_opt.lin_metabolism import MultiSubstrateFirstOrderRateLaw
+
 from os import path
 
 
@@ -25,10 +28,9 @@ class GrowthRateOptParamsTest(unittest.TestCase):
         opt = GrowthRateOptParams(maintenance_cost=1)
         self.assertEqual(opt.maintenance_cost, 1)
 
-        # Double check unit conversion to molar/s
-        # 1 mmol ATP/gDW/hr x 1e-3 mol/mmol x 0.3 gDW/g cell
-        # x 1000 g cell / L cell x 1 hr / 3600 s = 1080 molar ATP/s
-        self.assertAlmostEqual(opt.ATP_maint, 8.333e-5)
+        # Double check unit conversion to mol/gCDW/s
+        # 1 mmol ATP/gDW/hr x 2 gDW/gCDW x 1e-3 mol/mmol x 1 hr / 3600 s = 1080 molar ATP/s
+        self.assertAlmostEqual(opt.ATP_maint, 5.556e-7)
     
     def testBothPhiO(self):
         self.assertRaises(
@@ -76,8 +78,32 @@ class BasicModelTest(unittest.TestCase):
     
     def testMaxGrowthRateFirstOrder(self):
         # Optimize with default params
-        params = GrowthRateOptParams(rate_law=SimpleFirstOrderRateLaw(),
+        rl = SingleSubstrateFirstOrderRateLaw()
+        params = GrowthRateOptParams(rate_law=rl,
                                      fixed_ATP=0.01, fixed_NADH=0.01)
+        optimum, problem = self.model.maximize_growth_rate(params)
+    
+    def testMaxGrowthRateFirstOrderConcRatios(self):
+        # Optimize with default params
+        rl = SingleSubstrateFirstOrderRateLaw()
+        params = GrowthRateOptParams(
+            rate_law=rl,
+            fixed_ATP=0.01, fixed_ra=0.1,
+            fixed_NADH=0.01, fixed_re=0.1)
+        optimum, problem = self.model.maximize_growth_rate(params)
+
+    def testMaxGrowthRateMultiSubstrate(self):
+        rl = MultiSubstrateFirstOrderRateLaw()
+        params = GrowthRateOptParams(rate_law=rl,
+                                     fixed_ATP=0.01, fixed_NADH=0.01)
+        optimum, problem = self.model.maximize_growth_rate(params)
+
+    def testMaxGrowthRateMultiSubstrateConcRatios(self):
+        rl = MultiSubstrateFirstOrderRateLaw()
+        params = GrowthRateOptParams(
+            rate_law=rl,
+            fixed_ATP=0.01, fixed_ra=0.1,
+            fixed_NADH=0.01, fixed_re=0.1)
         optimum, problem = self.model.maximize_growth_rate(params)
 
     def testMaxGrowthRateDilution(self):

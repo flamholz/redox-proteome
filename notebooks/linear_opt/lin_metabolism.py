@@ -12,19 +12,10 @@ allocation in a simple 3 half reaction model of a single metabolism.
 __author__ = "Avi I. Flamholz"
 
 # Constants
-# Cell mass density assumed constant.
-RHO_CELL = 1000.0 # g/L
-# molar mass of a carbon atom  
-MW_C_ATOM = 12.0    
-S_PER_HR = 60*60 
-
-# 70%  of cell mass is water, 30% other stuff. 
-WATER_FRACTION = 0.7
-DW_FRACTION = 1-WATER_FRACTION
-# gDW per gC -- dry mass is 50% carbo. 
-GDW_PER_G_C = 2                   
-# g cells per g carbon
-GCELL_PER_GC = GDW_PER_G_C/DW_FRACTION  
+MW_C_ATOM       = 12.0  # molar mass of a carbon atom [g/mol]
+S_PER_HR        = 60*60 # seconds per hour 
+GC_PER_GDW      = 0.5   # g carbon per g dry weight
+GC_PER_GPROTEIN = 0.5   # g carbon per g protein
 
 
 class RateLawFunctor(object):
@@ -61,19 +52,30 @@ class ZerothOrderRateLaw(RateLawFunctor):
         return cp.multiply(gammas, phis)
 
 
-class SimpleFirstOrderRateLaw(RateLawFunctor):
+class SingleSubstrateFirstOrderRateLaw(RateLawFunctor):
     """First order rate law. 
 
-    Fluxes depends on concentrations to the first power.
+    Fluxes depends on concentrations to the first power. In this simple
+    version, each flux depends on only one substrate concentration.
 
-    Here anabolism is first order in ATP and reduction is first order in NADH.
+    Oxidation depends on NAD, reduction on NADH, anabolism on ATP.
+    Concentrations are normalized by the KM value given on construction. 
     """
     ORDER = 1
+
+    def __init__(self, KM=1e-4):
+        """Initializes the SimpleFirstOrderRateLaw class.
+
+        Args:
+            KM: float, Michaelis-Menten constant.
+        """
+        self.KM = KM
 
     def Apply(self, S, processes, metabolites, gammas, phis, concs):
         m_list = list(metabolites)
         p_list = list(processes)
 
+        # In this simple version
         ATP_index = m_list.index('ATP')
         NADH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
         NAD_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
@@ -82,15 +84,65 @@ class SimpleFirstOrderRateLaw(RateLawFunctor):
         red_index = p_list.index('reduction')
         h_index = p_list.index('ATP_homeostasis')
 
-        # binary matrix -- processes x metabolites -- indicating where ATP and NADH 
-        # are substrates. Note, for now each reaction can only have one substrate.
+        # binary matrix -- processes x metabolites -- indicating which metabolites
+        # are substrates of which processes. Here each reaction can have only
+        # one substrate.
         subs = np.zeros(S.shape)
         subs[ana_index, ATP_index] = 1
         subs[red_index, NADH_index] = 1
         subs[ox_index, NAD_index] = 1
         subs[h_index, ATP_index] = 1
 
-        conc_term = subs @ concs
+        conc_term = subs @ (concs / self.KM)
+        return cp.multiply(gammas, cp.multiply(phis, conc_term))
+    
+
+class MultiSubstrateFirstOrderRateLaw(RateLawFunctor):
+    """First order rate law. 
+
+    Fluxes depends on concentrations to the first power. In this version,
+    each flux can depend on multiple substrate concentrations.
+
+    Oxidation depends on NAD, reduction on NADH, anabolism on NADH and ATP.
+    Concentrations are normalized by the KM value given on construction.
+    """
+    ORDER = 1
+
+    def __init__(self, KM=1e-4):
+        """Initializes the SimpleFirstOrderRateLaw class.
+
+        Args:
+            KM: float, Michaelis-Menten constant.
+        """
+        self.KM = KM
+
+    def Apply(self, S, processes, metabolites, gammas, phis, concs):
+        m_list = list(metabolites)
+        p_list = list(processes)
+
+        # In this simple version
+        ATP_index = m_list.index('ATP')
+        NADH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
+        NAD_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
+        ana_index = p_list.index('anabolism')
+        ox_index = p_list.index('oxidation')
+        red_index = p_list.index('reduction')
+        h_index = p_list.index('ATP_homeostasis')
+
+        # binary matrix -- processes x metabolites -- indicating which metabolites
+        # are substrates of which processes. 
+        subs1 = np.zeros(S.shape)
+        subs1[ana_index, ATP_index] = 1
+        #subs1[red_index, NADH_index] = 1
+        #subs1[ox_index, NAD_index] = 1
+        #subs1[h_index, ATP_index] = 1
+
+        # second matrix for second set of substrates.
+        subs2 = np.zeros(S.shape)
+        subs2[ana_index, NADH_index] = 1
+
+        conc_term = subs1 @ (concs / self.KM)
+        conc_term = cp.multiply(conc_term, subs2 @ (concs / self.KM))
         return cp.multiply(gammas, cp.multiply(phis, conc_term))
     
 
@@ -155,11 +207,10 @@ class GrowthRateOptParams(object):
         self.fixed_re = fixed_re or 0
         self.fixed_NAD = self.fixed_NADH * self.fixed_re
 
-        # Convert maintenance molar ATP/s
+        # Convert maintenance to mol ATP/gCDW/s
         self.maintenance_cost = maintenance_cost or 0
         m = 1e-3*(self.maintenance_cost)/S_PER_HR   # mol ATP/gDW/s
-        # mol ATP/gDW/s * gDW/g cell * g cell/L = molar ATP/s
-        self.ATP_maint = m * DW_FRACTION * RHO_CELL
+        self.ATP_maint = m / GC_PER_GDW
         
 
 class LinearMetabolicModel(object):
@@ -326,6 +377,10 @@ class LinearMetabolicModel(object):
         
         TODO: make the output problem DCP-compliant.
             https://www.cvxpy.org/tutorial/dcp/index.html#dcp
+        TODO: what should kcat be? currently 50 /s for all processes. 
+        TODO: dilution for ADP and NAD? seems like I should. 
+        TODO: what do concentrations need to be in zero-order with dilution
+            to get a realistic growth rate?
 
         Args:
             gr_opt_params: a GrowthRateOptimizationParams object.
@@ -361,9 +416,8 @@ class LinearMetabolicModel(object):
 
         # gamma = kcat / m on the assumption that yields are 1.
         # kcat_s: effective rate constant for process i, [mol C/mol E/s]
-        # mcat_Da: per-process enzyme mass [g/mol E]
-        # TODO: I think we can ignore NC since it's absorbed in the kcat. Check.
-        gamma_vals = self.kcat_s / self.m_Da
+        # mcat_Da: per-process enzyme mass [g/mol E]. Converting here to [gC/mol E]
+        gamma_vals = self.kcat_s / (self.m_Da * GC_PER_GPROTEIN)
         gammas = cp.Parameter(
             name='gammas', shape=n_proc, value=gamma_vals, pos=True)
 
@@ -383,8 +437,9 @@ class LinearMetabolicModel(object):
 
         # Calculate fluxes using on the rate law functor.
         # TODO: pass in the stoichioemtric matrix and metabolite names. 
-        Js = params.rate_law.Apply(self.S, self.processes, self.metabolites,
-                                   gammas, phis, concs)
+        Js = params.rate_law.Apply(
+            self.S, self.processes, self.metabolites,
+            gammas, phis, concs)
 
         # Maximize the exponential growth rate by maximizing anabolic flux.
         # Though these are proportional, we convert units so opt has units of [1/hr].
@@ -392,7 +447,7 @@ class LinearMetabolicModel(object):
         # and the ratio of grams cell per gram C. Finally we convert /s to /hr.
         # If we assume the biomass C fraction is fixed, this exactly equals the growth rate
         ana_idx = self.S_df.index.get_loc('anabolism')   
-        growth_rate_s = Js[ana_idx]*GCELL_PER_GC*MW_C_ATOM     
+        growth_rate_s = Js[ana_idx]*MW_C_ATOM     
         growth_rate_hr = growth_rate_s*S_PER_HR
         obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
 
@@ -402,7 +457,7 @@ class LinearMetabolicModel(object):
         m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
 
         # Flux balance constraint, including ATP maintenance and dilution if configured.
-        metab_flux_balance = RHO_CELL*(self.S.T @ Js) - m
+        metab_flux_balance = (self.S.T @ Js) - m
         if params.do_dilution:
             # Using growth rate in /s here to match units of fluxes.
             metab_flux_balance = (
