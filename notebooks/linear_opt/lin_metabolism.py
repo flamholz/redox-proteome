@@ -52,24 +52,29 @@ class ZerothOrderRateLaw(RateLawFunctor):
         return cp.multiply(gammas, phis)
 
 
-class SingleSubstrateFirstOrderRateLaw(RateLawFunctor):
-    """First order rate law. 
+class SingleSubstrateMMRateLaw(RateLawFunctor):
+    """Michaelis-Menten type rate law.
+    
+    In this simple version, each flux depends on only one substrate concentration.
 
-    Fluxes depends on concentrations to the first power. In this simple
-    version, each flux depends on only one substrate concentration.
-
-    Oxidation depends on NAD, reduction on NADH, anabolism on ATP.
+    Oxidation depends on NAD, reduction on NADH, anabolism and homeostasis on ATP.
     Concentrations are normalized by the KM value given on construction. 
     """
     ORDER = 1
 
-    def __init__(self, KM=1e-4):
+    def __init__(self, KM=6e-7):
         """Initializes the SimpleFirstOrderRateLaw class.
 
         Args:
             KM: float, Michaelis-Menten constant.
         """
         self.KM = KM
+
+    def _rescale_concs(self, concs):
+        """Saturating dependence on concentration."""
+        normed = concs / self.KM
+        res = normed / (1 + normed)
+        return res
 
     def Apply(self, S, processes, metabolites, gammas, phis, concs):
         m_list = list(metabolites)
@@ -93,11 +98,12 @@ class SingleSubstrateFirstOrderRateLaw(RateLawFunctor):
         subs[ox_index, NAD_index] = 1
         subs[h_index, ATP_index] = 1
 
-        conc_term = subs @ (concs / self.KM)
+        rescaled_concs = self._rescale_concs(concs) 
+        conc_term = subs @ rescaled_concs
         return cp.multiply(gammas, cp.multiply(phis, conc_term))
     
 
-class MultiSubstrateFirstOrderRateLaw(RateLawFunctor):
+class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
     """First order rate law. 
 
     Fluxes depends on concentrations to the first power. In this version,
@@ -108,11 +114,12 @@ class MultiSubstrateFirstOrderRateLaw(RateLawFunctor):
     """
     ORDER = 1
 
-    def __init__(self, KM=1e-4):
+    def __init__(self, KM=6e-7):
         """Initializes the SimpleFirstOrderRateLaw class.
 
         Args:
             KM: float, Michaelis-Menten constant.
+                Default value is approx 1 mM in mol/gCDW units 
         """
         self.KM = KM
 
@@ -120,29 +127,39 @@ class MultiSubstrateFirstOrderRateLaw(RateLawFunctor):
         m_list = list(metabolites)
         p_list = list(processes)
 
-        # In this simple version
+        # Get the indices of the metabolites to make substrate matrices
         ATP_index = m_list.index('ATP')
         NADH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
         NAD_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
+        c_red_index = m_list.index('C_red')
+        ec_ox_index = m_list.index('E_ox')
+        biomass_index = m_list.index('biomass') 
         ana_index = p_list.index('anabolism')
         ox_index = p_list.index('oxidation')
         red_index = p_list.index('reduction')
         h_index = p_list.index('ATP_homeostasis')
 
-        # binary matrix -- processes x metabolites -- indicating which metabolites
-        # are substrates of which processes. 
+        # binary matrix -- processes x metabolites -- indicating which metabolites are
+        # substrates of which processes. Every reaction has to have exactly 1 substrate
+        # in the matrix, otherwise we will be multiplying by zero (no substrate) or 
+        # \sum(1*rescaled_conc) rather than 1*scaled_conc (the correct value).
         subs1 = np.zeros(S.shape)
         subs1[ana_index, ATP_index] = 1
-        #subs1[red_index, NADH_index] = 1
-        #subs1[ox_index, NAD_index] = 1
-        #subs1[h_index, ATP_index] = 1
+        subs1[ox_index, NAD_index] = 1
+        subs1[red_index, NADH_index] = 1
+        subs1[h_index, ATP_index] = 1
 
-        # second matrix for second set of substrates.
+        # second matrix for second set of substrates. here we are playing a little trick
+        # we know that biomass always has a dummy concentration of 1, so we can use that
+        # for homeostasis, which only has one substrate.
         subs2 = np.zeros(S.shape)
-        subs2[ana_index, NADH_index] = 1
+        subs2[ana_index, c_red_index] = 1
+        subs2[ox_index, NADH_index] = 1
+        subs2[red_index, ec_ox_index] = 1
+        subs1[h_index, biomass_index] = 1
 
-        conc_term = subs1 @ (concs / self.KM)
-        conc_term = cp.multiply(conc_term, subs2 @ (concs / self.KM))
+        scaled_concs = self._rescale_concs(concs)
+        conc_term = cp.multiply(subs1 @ scaled_concs, subs2 @ scaled_concs)
         return cp.multiply(gammas, cp.multiply(phis, conc_term))
     
 
@@ -153,18 +170,19 @@ class GrowthRateOptParams(object):
         do_dilution: boolean, whether to include dilution in the model.
         do_maintenance: boolean, whether to include maintenance in the model.
         rate_law: RateLawFunctor, rate law to use.
-        min_phi_O: float, minimum mass fraction for other processes.
-        phi_O: float, mass fraction for other processes.
+        min_phi_O: float, minimum C mass fraction for other processes.
+        phi_O: float, mass C fraction for other processes.
             Only one of min_phi_O and phi_O should be set.
+        max_phi_H: float, minimum C mass fraction for homeostasis.
         maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
-        ATP_maint: float, maintenance in units of [molar ATP/s].
+        ATP_maint: float, maintenance in units of [mol ATP/gCDW/s].
         max_lambda_hr: float, maximum lambda value. Units of [1/hr].
         fixed_ATP: float, fixed ATP concentration. [mol/L] units.
         fixed_NADH: float, fixed NADH concentration. [mol/L] units.
     """
     def __init__(self, do_dilution=False, rate_law=None,
-                 min_phi_O=None, phi_O=None,
+                 min_phi_O=None, phi_O=None, max_phi_H=None,
                  maintenance_cost=0, max_lambda_hr=None,
                  fixed_ATP=None, fixed_NADH=None,
                  fixed_ra=None, fixed_re=None):
@@ -173,9 +191,10 @@ class GrowthRateOptParams(object):
         Args:
             do_dilution: boolean, whether to include dilution in the model.
             rate_law: RateLawFunctor, rate law to use. If None, uses zeroth order.
-            min_phi_O: float, minimum mass fraction for other processes.
-            phi_O: float, mass fraction for other processes.
+            min_phi_O: float, minimum C mass fraction for other processes.
+            phi_O: float, mass C fraction for other processes.
                 Only one of min_phi_O and phi_O should be set.
+            max_phi_H: float, maximum C mass fraction for homeostasis.
             maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
             max_lambda_hr: float, maximum lambda value. Units of [1/hr].
@@ -199,6 +218,7 @@ class GrowthRateOptParams(object):
         self.do_dilution = do_dilution
         self.min_phi_O = min_phi_O or 0
         self.phi_O = phi_O
+        self.max_phi_H = max_phi_H
         self.max_lambda_hr = max_lambda_hr
         self.fixed_ATP = fixed_ATP or 0
         self.fixed_ra = fixed_ra or 0
@@ -423,7 +443,7 @@ class LinearMetabolicModel(object):
 
         # Internal metabolites like ATP and NADH must have concentrations 
         # if we want to account for dilution and/or concentration-dependent fluxes.
-        c_vals = np.zeros(n_met)
+        c_vals = np.ones(n_met)
         ATP_index = self.m_df.index.get_loc('ATP')
         ADP_index = self.m_df.index.get_loc('ADP')
         NADH_index = self.m_df.index.get_loc('ECH')
@@ -472,6 +492,9 @@ class LinearMetabolicModel(object):
             lambda_hr_ub = cp.Parameter(name='max_lambda_hr', nonneg=True,
                                         value=params.max_lambda_hr)
             constraints.append(growth_rate_hr <= lambda_hr_ub)
+        if params.max_phi_H is not None:
+            h_index = self.S_df.index.get_loc('ATP_homeostasis')
+            constraints.append(phis[h_index] <= params.max_phi_H)
 
         # Construct the problem and return
         return cp.Problem(obj, constraints)
@@ -527,14 +550,15 @@ class LinearMetabolicModel(object):
         soln_dict['lambda_hr'] = max_lambda
         soln_dict['maint'] = 0
         if 'maint' in opt_p.param_dict:
-            soln_dict['maint'] = opt_p.param_dict['maint'].value
+            ATP_index = self.m_df.index.get_loc('ATP')
+            soln_dict['maint'] = opt_p.param_dict['maint'].value[ATP_index]
         if 'max_lambda_hr' in opt_p.param_dict:
             soln_dict['max_lambda_hr'] = opt_p.param_dict['max_lambda_hr'].value
-        if 'phi_o' in opt_p.param_dict:
-            soln_dict['phi_o'] = opt_p.param_dict['phi_o'].value
-        elif 'phi_o' in opt_p.var_dict:
-            soln_dict['phi_o'] = opt_p.var_dict['phi_o'].value
-            soln_dict['min_phi_o'] = opt_p.param_dict['min_phi_o'].value
+        if 'phi_O' in opt_p.param_dict:
+            soln_dict['phi_O'] = opt_p.param_dict['phi_O'].value
+        elif 'phi_O' in opt_p.var_dict:
+            soln_dict['phi_O'] = opt_p.var_dict['phi_O'].value
+            soln_dict['min_phi_O'] = opt_p.param_dict['min_phi_O'].value
 
         gammas = opt_p.param_dict['gammas'].value
         phis = opt_p.var_dict['phis'].value
@@ -546,6 +570,13 @@ class LinearMetabolicModel(object):
             soln_dict[pname + '_gamma'] = my_g
             soln_dict[pname + '_phi'] = my_phi
             soln_dict[pname + '_flux'] = my_j
+
+        # Get the concentrations
+        if 'concs' in opt_p.param_dict:
+            met_names = self.m_df.index.values
+            concs = opt_p.param_dict['concs'].value
+            for m, c in zip(met_names, concs):
+                soln_dict[m + '_conc'] = c
 
         return soln_dict
 

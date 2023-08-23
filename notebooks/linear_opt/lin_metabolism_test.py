@@ -2,8 +2,8 @@ import unittest
 
 from linear_opt.lin_metabolism import GrowthRateOptParams, RateLawFunctor
 from linear_opt.lin_metabolism import LinearMetabolicModel
-from linear_opt.lin_metabolism import SingleSubstrateFirstOrderRateLaw
-from linear_opt.lin_metabolism import MultiSubstrateFirstOrderRateLaw
+from linear_opt.lin_metabolism import SingleSubstrateMMRateLaw
+from linear_opt.lin_metabolism import MultiSubstrateMMRateLaw
 
 from os import path
 
@@ -78,14 +78,14 @@ class BasicModelTest(unittest.TestCase):
     
     def testMaxGrowthRateFirstOrder(self):
         # Optimize with default params
-        rl = SingleSubstrateFirstOrderRateLaw()
+        rl = SingleSubstrateMMRateLaw()
         params = GrowthRateOptParams(rate_law=rl,
                                      fixed_ATP=0.01, fixed_NADH=0.01)
         optimum, problem = self.model.maximize_growth_rate(params)
     
     def testMaxGrowthRateFirstOrderConcRatios(self):
         # Optimize with default params
-        rl = SingleSubstrateFirstOrderRateLaw()
+        rl = SingleSubstrateMMRateLaw()
         params = GrowthRateOptParams(
             rate_law=rl,
             fixed_ATP=0.01, fixed_ra=0.1,
@@ -93,13 +93,13 @@ class BasicModelTest(unittest.TestCase):
         optimum, problem = self.model.maximize_growth_rate(params)
 
     def testMaxGrowthRateMultiSubstrate(self):
-        rl = MultiSubstrateFirstOrderRateLaw()
+        rl = MultiSubstrateMMRateLaw()
         params = GrowthRateOptParams(rate_law=rl,
                                      fixed_ATP=0.01, fixed_NADH=0.01)
         optimum, problem = self.model.maximize_growth_rate(params)
 
     def testMaxGrowthRateMultiSubstrateConcRatios(self):
-        rl = MultiSubstrateFirstOrderRateLaw()
+        rl = MultiSubstrateMMRateLaw()
         params = GrowthRateOptParams(
             rate_law=rl,
             fixed_ATP=0.01, fixed_ra=0.1,
@@ -110,6 +110,22 @@ class BasicModelTest(unittest.TestCase):
         params = GrowthRateOptParams(
             do_dilution=True, fixed_ATP=0.01, fixed_NADH=0.01)
         optimum, problem = self.model.maximize_growth_rate(params)
+
+    def testProblemAsDict(self):
+        # Put some concentrations in there
+        params = GrowthRateOptParams(do_dilution=True,
+                                     fixed_ATP=0.01, fixed_NADH=0.01)
+        optimum, problem = self.model.maximize_growth_rate(params)
+        d = self.model.solution_as_dict(problem)
+
+        # Check that the concs we put in are there
+        self.assertEqual(d['ATP_conc'], 0.01)
+        self.assertEqual(d['ECH_conc'], 0.01)
+
+    def testModelAsDict(self):
+        d = self.model.model_as_dict()
+        for n in self.STOICHS + self.ZCS:
+            self.assertTrue(n in d)
 
 
 if __name__ == '__main__':
