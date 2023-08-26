@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 
 from linear_opt.lin_metabolism import GrowthRateOptParams, RateLawFunctor
 from linear_opt.lin_metabolism import LinearMetabolicModel
@@ -58,18 +59,49 @@ class BasicModelTest(unittest.TestCase):
         S_fname = path.join(model_dir, 'glucose_resp_stoich_matrix.csv')
         self.model = LinearMetabolicModel.FromFiles(m_fname, S_fname)
 
+        # These are the values in the default model file above (for now)
+        self.expected_Svals = dict(S1=2, S2=-0.5, S3=0.5, S4=1, S5=-0.3, S6=0)
+
+    def testSetS6(self):
+        for v in np.arange(-3, 3):
+            zcorg = self.model.ZCorg
+            expected_zcb = zcorg + 2*v
+            self.model.set_S6(v)
+            self.assertEqual(self.model.get_S6(), v)
+            self.assertEqual(self.model.ZCB, expected_zcb)
+
+    def testSetZCorg(self):
+        for v in np.arange(-3, 3):
+            zcb = self.model.ZCB
+            expected_S6 = (zcb - v)/2
+            self.model.set_ZCorg(v)
+            self.assertEqual(self.model.get_S6(), expected_S6)
+            self.assertEqual(self.model.ZCorg, v)
+
+    def testSetZCB(self):
+        for v in np.arange(-3, 3):
+            zcorg = self.model.ZCorg
+            expected_S6 = (v - zcorg)/2
+            self.model.set_ZCB(v)
+            self.assertEqual(self.model.get_S6(), expected_S6)
+            self.assertEqual(self.model.ZCB, v)
+
     def testModelAsDict(self):
         d = self.model.model_as_dict()
         for n in self.STOICHS + self.ZCS:
             self.assertTrue(n in d)
+        
+        for k, v in self.expected_Svals.items():
+            self.assertEqual(d[k], v)
 
     def testMaxGrowthRateBasic(self):
+        print('AAAH')
         # Optimize with default params
         params = GrowthRateOptParams()
         optimum, problem = self.model.maximize_growth_rate(params)
 
         # Check the dictionary has some keys in it as expected.
-        soln_dict = self.model.solution_as_dict(problem)
+        soln_dict = self.model.solution_as_dict(problem, params)
         process_names = self.model.S_df.index.values.tolist()
         for p in process_names:
             self.assertTrue(p + "_gamma" in soln_dict)
@@ -116,16 +148,11 @@ class BasicModelTest(unittest.TestCase):
         params = GrowthRateOptParams(do_dilution=True,
                                      fixed_ATP=0.01, fixed_NADH=0.01)
         optimum, problem = self.model.maximize_growth_rate(params)
-        d = self.model.solution_as_dict(problem)
+        d = self.model.solution_as_dict(problem, params)
 
         # Check that the concs we put in are there
         self.assertEqual(d['ATP_conc'], 0.01)
         self.assertEqual(d['ECH_conc'], 0.01)
-
-    def testModelAsDict(self):
-        d = self.model.model_as_dict()
-        for n in self.STOICHS + self.ZCS:
-            self.assertTrue(n in d)
 
 
 if __name__ == '__main__':

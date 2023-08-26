@@ -22,6 +22,7 @@ class RateLawFunctor(object):
     """Abstract base class for rate law functors."""
 
     ORDER = None
+    NAME = None
 
     def Apply(self, S, processes, metabolites, gammas, phis, concs):
         """Applies the rate law to the given concentrations.
@@ -47,6 +48,7 @@ class ZerothOrderRateLaw(RateLawFunctor):
     Flux is independent of the concentrations of the reactants.
     """
     ORDER = 0
+    NAME = 'ZeroOrder'
 
     def Apply(self, S, processes, metabolites, gammas, phis, concs):
         return cp.multiply(gammas, phis)
@@ -61,6 +63,7 @@ class SingleSubstrateMMRateLaw(RateLawFunctor):
     Concentrations are normalized by the KM value given on construction. 
     """
     ORDER = 1
+    NAME = 'SingleSubstrateMM'
 
     def __init__(self, KM=6e-7):
         """Initializes the SimpleFirstOrderRateLaw class.
@@ -101,6 +104,7 @@ class SingleSubstrateMMRateLaw(RateLawFunctor):
         rescaled_concs = self._rescale_concs(concs) 
         conc_term = subs @ rescaled_concs
         return cp.multiply(gammas, cp.multiply(phis, conc_term))
+            
     
 
 class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
@@ -113,6 +117,7 @@ class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
     Concentrations are normalized by the KM value given on construction.
     """
     ORDER = 1
+    NAME = 'MultiSubstrateMM'
 
     def __init__(self, KM=6e-7):
         """Initializes the SimpleFirstOrderRateLaw class.
@@ -231,7 +236,45 @@ class GrowthRateOptParams(object):
         self.maintenance_cost = maintenance_cost or 0
         m = 1e-3*(self.maintenance_cost)/S_PER_HR   # mol ATP/gDW/s
         self.ATP_maint = m / GC_PER_GDW
-        
+
+    def as_dict(self):
+        """Returns a dictionary of parameters."""
+        max_phi_H = None
+        if self.max_phi_H is not None:
+            max_phi_H = self.max_phi_H
+
+        return {
+            'opt.do_dilution': self.do_dilution,
+            'opt.min_phi_O': self.min_phi_O,
+            'opt.phi_O': self.phi_O,
+            'opt.max_phi_H_set': self.max_phi_H is not None,
+            'opt.max_phi_H_value': self.max_phi_H,
+            'opt.maintenance_cost_mmol_gDW_hr': self.maintenance_cost,
+            'opt.ATP_maint_mol_gCDW_s': self.ATP_maint,
+            'opt.max_lambda_hr': self.max_lambda_hr,
+            'opt.fixed_ATP_mol_gCDW': self.fixed_ATP,
+            'opt.fixed_NADH_mol_gCDW': self.fixed_NADH,
+            'opt.fixed_NAD_mol_gCDW': self.fixed_NAD,
+            'opt.fixed_ADP_mol_gCDW': self.fixed_ADP,
+            'opt.fixed_ra': self.fixed_ra,
+            'opt.fixed_re': self.fixed_re,
+            'opt.rate_law_name': self.rate_law.NAME,
+            'opt.rate_law_order': self.rate_law.ORDER,
+        }
+    
+    def copy(self):
+        return GrowthRateOptParams(
+            do_dilution=self.do_dilution,
+            rate_law=self.rate_law,
+            min_phi_O=self.min_phi_O,
+            phi_O=self.phi_O,
+            max_phi_H=self.max_phi_H,
+            maintenance_cost=self.maintenance_cost,
+            max_lambda_hr=self.max_lambda_hr,
+            fixed_ATP=self.fixed_ATP,
+            fixed_NADH=self.fixed_NADH,
+            fixed_ra=self.fixed_ra,
+            fixed_re=self.fixed_re)
 
 class LinearMetabolicModel(object):
     """Coarse-grained linear model of resource allocation while balancing ATP and e- fluxes."""
@@ -312,21 +355,51 @@ class LinearMetabolicModel(object):
     
     def get_S6(self):
         assert self.S_df.at['anabolism','EC'] == -self.S_df.at['anabolism','ECH']
-        return self.S_df.at['anabolism','EC']
+        return self.S_df.at['anabolism','ECH']
 
     def set_S6(self, new_S6):
         """Sets the S6 value and updates stoichiometries accordingly.
-        
+
+        Note: consuming NADH, i.e. making reduced biomass, is negative S6.
+
         Assumes that changes in S6 are due only to changing Z_C,B.
         """
-        new_ZCB = self.ZCorg - 2*new_S6
+        new_ZCB = (self.ZCorg + 2*new_S6)
         self.set_ZCB(new_ZCB)
 
+    def set_ZCorg(self, new_ZCorg):
+        """Sets the Z_C,org value and updates stoichiometries accordingly.
+        
+        Assumes ZCB is fixed, recalculates S1 and S6 accordingly.
+        """
+        new_S1 = (self.ZCprod - new_ZCorg)/2
+        new_S6 = (self.ZCB - new_ZCorg)/2
+
+        # NOTE: electron carrier carries 2 electrons. 
+
+        # Update the NOSC of reduced carbon 
+        self.m_df.at['C_red', 'NOSC'] = new_ZCorg
+        self.ZCorg = new_ZCorg
+
+        # update the stoichiometric matrix
+        self.S_df.at['anabolism','EC'] = -new_S6
+        self.S_df.at['anabolism','ECH'] = new_S6
+        self.S_df.at['oxidation','EC'] = -new_S1
+        self.S_df.at['oxidation','ECH'] = new_S1
+        self._update_S()
+        
+        # check C and e- balancing
+        self._check_c_balance()
+        self._check_e_balance()
+
     def set_ZCB(self, new_ZCB):
-        """Sets the Z_C,B value and updates stoichiometries accordingly."""
-        # S6 is the stoichiometric coefficient of the electron carrier 
-        # in the anabolism reaction. We are updating that here. 
-        new_S6 = (self.ZCorg - new_ZCB)/2
+        """Sets the Z_C,B value and updates stoichiometries accordingly.
+        
+        Assumes ZCorg is fixed, recalculates S6 accordingly.
+        """
+        # S6 is the number of electron carriers produced in anabolism. 
+        # So it's negative when anabolism consumes NADH. 
+        new_S6 = (new_ZCB - self.ZCorg)/2
         # NOTE: electron carrier carries 2 electrons. 
 
         # Since all the fluxes are per-C, don't need to check stoichiometry.
@@ -335,8 +408,8 @@ class LinearMetabolicModel(object):
         self.ZCB = new_ZCB
 
         # update the stoichiometric matrix
-        self.S_df.at['anabolism','EC'] = new_S6
-        self.S_df.at['anabolism','ECH'] = -new_S6
+        self.S_df.at['anabolism','EC'] = -new_S6
+        self.S_df.at['anabolism','ECH'] = new_S6
         self._update_S()
         
         # check C and e- balancing
@@ -527,21 +600,32 @@ class LinearMetabolicModel(object):
         model_dict['ZCorg'] = self.ZCorg
         model_dict['ZCprod'] = self.ZCprod
         
-        # Return the stoichiometries as positive values since this 
-        # is assumed in the model definition and analytics.
+        # Return the stoichiometries from the matrix
         model_dict['S1'] = self.S_df.at['oxidation','ECH']
-        model_dict['S2'] = self.S_df.at['reduction','EC']
+        model_dict['S2'] = self.S_df.at['reduction','ECH']
         model_dict['S3'] = self.S_df.at['oxidation','ATP']
         model_dict['S4'] = self.S_df.at['reduction','ATP']
-        model_dict['S5'] = self.S_df.at['anabolism','ADP']
+        model_dict['S5'] = self.S_df.at['anabolism','ATP']
         model_dict['S6'] = self.get_S6()
         
         return model_dict
 
-    def solution_as_dict(self, opt_p):
-        """Returns a dictionary of solution values for a solved problem."""
+    def solution_as_dict(self, optimized_p, params):
+        """Returns a dictionary of solution values for a solved problem.
+        
+        Args:
+            optimized_p: a solved cvxpy Problem object.
+            params: a GrowthRateOptParams object.
+        
+        Returns:
+            A dictionary of solution values.
+        """
+        opt_p = optimized_p
+        rl = params.rate_law
+
         soln_dict = defaultdict(float)
-        has_opt = opt_p.status == 'optimal'
+        soln_dict['opt_status'] = opt_p.status
+        has_opt = opt_p.status == cp.OPTIMAL
         opt_val = 0
         if has_opt:
             opt_val = opt_p.value
@@ -564,19 +648,24 @@ class LinearMetabolicModel(object):
         phis = opt_p.var_dict['phis'].value
         if not has_opt:
             phis = np.zeros(self.n_processes)
-        js = gammas*phis
 
-        for pname, my_g, my_phi, my_j in zip(self.processes, gammas, phis, js):
-            soln_dict[pname + '_gamma'] = my_g
-            soln_dict[pname + '_phi'] = my_phi
-            soln_dict[pname + '_flux'] = my_j
-
-        # Get the concentrations
+        # Get concs if they are in the model
+        concs = None
         if 'concs' in opt_p.param_dict:
             met_names = self.m_df.index.values
             concs = opt_p.param_dict['concs'].value
             for m, c in zip(met_names, concs):
                 soln_dict[m + '_conc'] = c
+        
+        # Get the fluxes using the rate law
+        js = params.rate_law.Apply(
+            self.S, self.processes, self.metabolites,
+            gammas, phis, concs).value
+
+        for pname, my_g, my_phi, my_j in zip(self.processes, gammas, phis, js):
+            soln_dict[pname + '_gamma'] = my_g
+            soln_dict[pname + '_phi'] = my_phi
+            soln_dict[pname + '_flux'] = my_j
 
         return soln_dict
 
