@@ -5,8 +5,16 @@ from linear_opt.lin_metabolism import GrowthRateOptParams, RateLawFunctor
 from linear_opt.lin_metabolism import LinearMetabolicModel
 from linear_opt.lin_metabolism import SingleSubstrateMMRateLaw
 from linear_opt.lin_metabolism import MultiSubstrateMMRateLaw
+from linear_opt.lin_metabolism import MW_C_ATOM
 
 from os import path
+
+# Approximate concentrations and ratios for plotting
+# Based on Bennett et al. 2009 measurements in E. coli
+DEFAULT_ATP = 1.4e-6
+DEFAULT_NADH = 1.2e-7
+DEFAULT_RE = 10
+DEFAULT_RA = 0.3
 
 
 class FakeRateLaw(RateLawFunctor):
@@ -94,19 +102,54 @@ class BasicModelTest(unittest.TestCase):
         for k, v in self.expected_Svals.items():
             self.assertEqual(d[k], v)
 
+    def testSetProcessMass(self):
+        process_names = self.model.S_df.index.values.tolist()
+        for mass in np.arange(0, 10, 0.1):
+            for process in process_names:
+                self.model.set_process_mass(process, 1)
+                self.assertEqual(self.model.get_process_mass(process), 1)
+
+    def testSetProcessMasses(self):
+        process_names = self.model.S_df.index.values.tolist()
+        for mass in np.arange(0, 10, 0.1):
+            self.model.set_process_masses(mass)
+            for process in process_names:
+                self.assertEqual(self.model.get_process_mass(process), mass)
+
     def testMaxGrowthRateBasic(self):
-        print('AAAH')
         # Optimize with default params
         params = GrowthRateOptParams()
         optimum, problem = self.model.maximize_growth_rate(params)
 
         # Check the dictionary has some keys in it as expected.
         soln_dict = self.model.solution_as_dict(problem, params)
+        soln_dict.update(self.model.model_as_dict())
+        soln_dict.update(params.as_dict())
+
         process_names = self.model.S_df.index.values.tolist()
         for p in process_names:
             self.assertTrue(p + "_gamma" in soln_dict)
             self.assertTrue(p + "_phi" in soln_dict)
             self.assertTrue(p + "_flux" in soln_dict)
+
+            # Check that the fluxes are consistent with the gammas and phis
+            # Assumes linear rate law, which is the default
+            g = soln_dict[p + "_gamma"]
+            phi = soln_dict[p + "_phi"]
+            flux = soln_dict[p + "_flux"]
+            self.assertAlmostEqual(g*phi, flux)
+        
+        # Check that anabolism flux is consistent with the growth rate
+        # Assumes linear rate law, which is the default
+        J_ana = soln_dict['anabolism_flux']
+        phi_ana = soln_dict['anabolism_phi']
+        gamma_ana = soln_dict['anabolism_gamma']
+        self.assertAlmostEqual(gamma_ana*phi_ana, J_ana)
+        growth_rate = soln_dict['lambda_hr']
+        mC = MW_C_ATOM
+        self.assertAlmostEqual(3600*mC*J_ana, growth_rate)
+        self.assertAlmostEqual(3600*mC*gamma_ana*phi_ana, growth_rate)
+        self.assertEquals(optimum, growth_rate)
     
     def testMaxGrowthRateFirstOrder(self):
         # Optimize with default params
@@ -154,6 +197,35 @@ class BasicModelTest(unittest.TestCase):
         self.assertEqual(d['ATP_conc'], 0.01)
         self.assertEqual(d['ECH_conc'], 0.01)
 
+
+class AutoModelTest(unittest.TestCase):
+    """Test growth rate params."""
+
+    STOICHS = 'S1,S2,S3,S4,S5,S6'.split(',')
+    ZCS = 'ZCorg,ZCprod,ZCB'.split(',')
+
+    def setUp(self):
+        # Loading the model of respiration just to exercise the code. 
+        model_dir = '../models/linear/autotrophy/'
+        m_fname = path.join(model_dir, 'glucose_auto_molecular_props.csv')
+        S_fname = path.join(model_dir, 'glucose_auto_stoich_matrix.csv')
+        self.model = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+    
+    def testSetZCorg(self):
+        for v in np.arange(-3, 3):
+            zcb = self.model.ZCB
+            expected_S6 = (zcb - v)/2
+            self.model.set_ZCorg(v, heterotroph=False)
+            self.assertEqual(self.model.get_S6(), expected_S6)
+            self.assertEqual(self.model.ZCorg, v)
+
+    def testSetZCB(self):
+        for v in np.arange(-3, 3):
+            zcorg = self.model.ZCorg
+            expected_S6 = (v - zcorg)/2
+            self.model.set_ZCB(v)
+            self.assertEqual(self.model.get_S6(), expected_S6)
+            self.assertEqual(self.model.ZCB, v)
 
 if __name__ == '__main__':
     unittest.main()

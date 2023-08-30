@@ -52,7 +52,7 @@ class ZerothOrderRateLaw(RateLawFunctor):
 
     def Apply(self, S, processes, metabolites, gammas, phis, concs):
         return cp.multiply(gammas, phis)
-
+    
 
 class SingleSubstrateMMRateLaw(RateLawFunctor):
     """Michaelis-Menten type rate law.
@@ -183,14 +183,19 @@ class GrowthRateOptParams(object):
                 These are typically reported units for convenience.
         ATP_maint: float, maintenance in units of [mol ATP/gCDW/s].
         max_lambda_hr: float, maximum lambda value. Units of [1/hr].
-        fixed_ATP: float, fixed ATP concentration. [mol/L] units.
-        fixed_NADH: float, fixed NADH concentration. [mol/L] units.
+        fixed_ATP: float, fixed ATP concentration. [mol/gCDW] units.
+        fixed_NADH: float, fixed NADH concentration. [mol/gCDW] units.
+        fixed_re: float, fixed ratio of NAD/NADH concentrations.
+        fixed_ra: float, fixed ratio of ADP/ATP concentrations.
+        fixed_NAD: float, fixed NAD concentration. [mol/gCDW] units.
+        fixed_ADP: float, fixed ADP concentration. [mol/gCDW] units.
+        fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
     """
     def __init__(self, do_dilution=False, rate_law=None,
                  min_phi_O=None, phi_O=None, max_phi_H=None,
                  maintenance_cost=0, max_lambda_hr=None,
                  fixed_ATP=None, fixed_NADH=None,
-                 fixed_ra=None, fixed_re=None):
+                 fixed_ra=None, fixed_re=None, fixed_C_red=None):
         """Initializes the GrowthRateOptParams class.
 
         Args:
@@ -203,10 +208,11 @@ class GrowthRateOptParams(object):
             maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
             max_lambda_hr: float, maximum lambda value. Units of [1/hr].
-            fixed_ATP: float, fixed ATP concentration. [mol/L] units.
-            fixed_NADH: float, fixed NADH concentration. [mol/L] units.
+            fixed_ATP: float, fixed ATP concentration. [mol/gCDW] units.
+            fixed_NADH: float, fixed NADH concentration. [mol/gCDW] units.
             fixed_re: float, fixed ratio of NAD/NADH concentrations.
             fixed_ra: float, fixed ratio of ADP/ATP concentrations.
+            fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
         """
         msg = "Only one of min_phi_O and phi_O should be set."
         assert (min_phi_O is None) or (phi_O is None), msg
@@ -231,6 +237,7 @@ class GrowthRateOptParams(object):
         self.fixed_NADH = fixed_NADH or 0
         self.fixed_re = fixed_re or 0
         self.fixed_NAD = self.fixed_NADH * self.fixed_re
+        self.fixed_C_red = fixed_C_red or 0
 
         # Convert maintenance to mol ATP/gCDW/s
         self.maintenance_cost = maintenance_cost or 0
@@ -256,6 +263,7 @@ class GrowthRateOptParams(object):
             'opt.fixed_NADH_mol_gCDW': self.fixed_NADH,
             'opt.fixed_NAD_mol_gCDW': self.fixed_NAD,
             'opt.fixed_ADP_mol_gCDW': self.fixed_ADP,
+            'opt.fixed_C_red_mol_gCDW': self.fixed_C_red,
             'opt.fixed_ra': self.fixed_ra,
             'opt.fixed_re': self.fixed_re,
             'opt.rate_law_name': self.rate_law.NAME,
@@ -274,7 +282,8 @@ class GrowthRateOptParams(object):
             fixed_ATP=self.fixed_ATP,
             fixed_NADH=self.fixed_NADH,
             fixed_ra=self.fixed_ra,
-            fixed_re=self.fixed_re)
+            fixed_re=self.fixed_re,
+            fixed_C_red=self.fixed_C_red)
 
 class LinearMetabolicModel(object):
     """Coarse-grained linear model of resource allocation while balancing ATP and e- fluxes."""
@@ -367,12 +376,17 @@ class LinearMetabolicModel(object):
         new_ZCB = (self.ZCorg + 2*new_S6)
         self.set_ZCB(new_ZCB)
 
-    def set_ZCorg(self, new_ZCorg):
+    def set_ZCorg(self, new_ZCorg, heterotroph=True):
         """Sets the Z_C,org value and updates stoichiometries accordingly.
         
-        Assumes ZCB is fixed, recalculates S1 and S6 accordingly.
+        Assumes ZCB is fixed, recalculates S1/S2 and S6 accordingly.
+
+        Args:
+            new_ZCorg: float new Z_C,org value
+            heterotroph: boolean, whether considered a 
+                heterotroph or autotroph.
         """
-        new_S1 = (self.ZCprod - new_ZCorg)/2
+        new_SX = (self.ZCprod - new_ZCorg)/2
         new_S6 = (self.ZCB - new_ZCorg)/2
 
         # NOTE: electron carrier carries 2 electrons. 
@@ -384,8 +398,13 @@ class LinearMetabolicModel(object):
         # update the stoichiometric matrix
         self.S_df.at['anabolism','EC'] = -new_S6
         self.S_df.at['anabolism','ECH'] = new_S6
-        self.S_df.at['oxidation','EC'] = -new_S1
-        self.S_df.at['oxidation','ECH'] = new_S1
+
+        if heterotroph:
+            self.S_df.at['oxidation','EC'] = -new_SX
+            self.S_df.at['oxidation','ECH'] = new_SX
+        else:
+            self.S_df.at['reduction','EC'] = new_SX
+            self.S_df.at['reduction','ECH'] = -new_SX
         self._update_S()
         
         # check C and e- balancing
@@ -442,13 +461,17 @@ class LinearMetabolicModel(object):
         self._check_c_balance()
         self._check_e_balance()
 
+    def get_process_mass(self, process):
+        """Returns the mass of enzyme required for a process in kDa."""
+        return self.S_df.at[process, 'm_kDa']
+
     def set_process_masses(self, new_mass):
         """Sets the mass of enzyme required for all processes.
 
         Args:
             new_mass: float new mass in kDa
         """
-        self.S_df.at[:, 'm_kDa'] = new_mass
+        self.S_df['m_kDa'] = new_mass
         self._update_S()
         self._check_c_balance()
         self._check_e_balance()
@@ -521,10 +544,12 @@ class LinearMetabolicModel(object):
         ADP_index = self.m_df.index.get_loc('ADP')
         NADH_index = self.m_df.index.get_loc('ECH')
         NAD_index = self.m_df.index.get_loc('EC')
+        C_red_index = self.m_df.index.get_loc('C_red')
         c_vals[ATP_index] = params.fixed_ATP
         c_vals[ADP_index] = params.fixed_ADP
         c_vals[NADH_index] = params.fixed_NADH
         c_vals[NAD_index] = params.fixed_NAD
+        c_vals[C_red_index] = params.fixed_C_red
         concs = cp.Parameter(
             name='concs', shape=n_met, nonneg=True, value=c_vals)
 
@@ -594,8 +619,7 @@ class LinearMetabolicModel(object):
         model_dict = defaultdict(float)
         for pname, k, m in zip(self.processes, self.kcat_s, self.m_kDa):
             model_dict[pname + '_kcat_s'] = k
-            model_dict[pname + '_m_kDa'] = m
-            model_dict[pname + '_gamma'] = k/(m*1000)          
+            model_dict[pname + '_m_kDa'] = m      
         model_dict['ZCB'] = self.ZCB
         model_dict['ZCorg'] = self.ZCorg
         model_dict['ZCprod'] = self.ZCprod
@@ -668,5 +692,11 @@ class LinearMetabolicModel(object):
             soln_dict[pname + '_flux'] = my_j
 
         return soln_dict
-
+    
+    def results_as_dict(self, optimized_p, params):
+        """Returns a full dictionary of model and solution parameters."""
+        d = self.model_as_dict()
+        d.update(self.solution_as_dict(optimized_p, params))
+        d.update(params.as_dict())
+        return d
             
