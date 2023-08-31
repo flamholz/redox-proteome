@@ -30,8 +30,12 @@ class GrowthRateOptParamsTest(unittest.TestCase):
         self.assertEqual(opt.rate_law.ORDER, 0)
         self.assertEqual(opt.min_phi_O, 0)
         self.assertEqual(opt.ATP_maint, 0)
-        self.assertEqual(opt.fixed_ATP, 0)
-        self.assertEqual(opt.fixed_NADH, 0)
+        self.assertEqual(opt.fixed_ATP, 1)
+        self.assertEqual(opt.fixed_NADH, 1)
+        self.assertEqual(opt.fixed_ADP, 1)
+        self.assertEqual(opt.fixed_NAD, 1)
+        self.assertEqual(opt.fixed_C_red, 1)
+        
 
     def testMaintenance(self):
         opt = GrowthRateOptParams(maintenance_cost=1)

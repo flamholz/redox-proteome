@@ -231,13 +231,16 @@ class GrowthRateOptParams(object):
         self.phi_O = phi_O
         self.max_phi_H = max_phi_H
         self.max_lambda_hr = max_lambda_hr
-        self.fixed_ATP = fixed_ATP or 0
-        self.fixed_ra = fixed_ra or 0
+
+        # default concentrations are 1 so that
+        # nothing changes if not specified.
+        self.fixed_ATP = fixed_ATP or 1
+        self.fixed_ra = fixed_ra or 1
         self.fixed_ADP = self.fixed_ATP * self.fixed_ra
-        self.fixed_NADH = fixed_NADH or 0
-        self.fixed_re = fixed_re or 0
+        self.fixed_NADH = fixed_NADH or 1
+        self.fixed_re = fixed_re or 1
         self.fixed_NAD = self.fixed_NADH * self.fixed_re
-        self.fixed_C_red = fixed_C_red or 0
+        self.fixed_C_red = fixed_C_red or 1
 
         # Convert maintenance to mol ATP/gCDW/s
         self.maintenance_cost = maintenance_cost or 0
@@ -634,6 +637,61 @@ class LinearMetabolicModel(object):
         
         return model_dict
 
+    def _analytics_zo(self, soln_dict):
+        """Analytic values for zeroth order rate law.
+        
+        Returns:
+            four tuple of the following variables
+                lambda: growth rate calculated from fluxes
+                lambda_max: maximum growth calculated from model parameters
+                S6_lb: lower bound on viable S6 in the absence of ATP homeostasis
+                S6_ub: upper bound on viable S6 in the absence of ATP homeostasis
+        """
+        sd = soln_dict
+        g_ana = sd['anabolism_gamma']
+        g_red = sd['reduction_gamma']
+        g_ox = sd['oxidation_gamma']
+        g_h = sd['ATP_homeostasis_gamma']
+        phi_O = sd['phi_O']
+        phi_H = sd['ATP_homeostasis_phi']
+        b = sd['maint']
+        A = sd['ATP_conc']
+        N = sd['ECH_conc']
+        mC = MW_C_ATOM
+        S1, S2, S3 = sd['S1'], sd['S2'], sd['S3'], 
+        S4, S5, S6 = sd['S4'], sd['S5'], sd['S6']
+
+        # Handle lower bound first
+        phi_term = (phi_O-1)
+        b_term = (b + S5*g_ox*phi_term)
+        num =  S2*g_red*b_term + mC*g_ana*(b*N - (A*S2-N*S4)*phi_term*g_red)
+        denom = g_ana*(b + S4*g_red*phi_term)
+        S6_lb = num / denom 
+
+        # Now upper bound
+        num = S1*g_ox*b_term + mC*g_ana*(b*N - (A*S1-N*S3)*phi_term*g_red)
+        denom = g_ana*(b + S3*g_ox*phi_term)
+        S6_ub = num / denom
+
+        # lambda calculated from interdependence of fluxes
+        J_ox = sd['oxidation_flux']
+        J_h = sd['ATP_homeostasis_flux']
+        num = mC*(S2*(b + J_h - J_ox*S3)+J_ox*S1*S4)
+        denom = mC*(A*S2-N*S4)-S2*S5+S4*S6
+        lam = -3600*num/denom
+
+        # maximum lambda from model parameters by Lagrange multipliers
+        phi_term = (1 - phi_H - phi_O)
+        S12_term = (S2*g_red-S1*g_ox)
+        S34_term = (S4*g_red-S3*g_ox)
+        num = S12_term*(S3*g_ox*phi_term - g_h*phi_H - b)
+        num -= S1*g_ox*S34_term*phi_term
+        denom = ((S5/mC) - A - (S3*g_ox)/(mC*g_ana))*S12_term
+        denom -= ((S6/mC) - N - (S1*g_ox)/(mC*g_ana))*S34_term
+        lam_max = -3600*num/denom
+
+        return lam, lam_max, S6_lb, S6_ub
+
     def solution_as_dict(self, optimized_p, params):
         """Returns a dictionary of solution values for a solved problem.
         
@@ -698,5 +756,12 @@ class LinearMetabolicModel(object):
         d = self.model_as_dict()
         d.update(self.solution_as_dict(optimized_p, params))
         d.update(params.as_dict())
+
+        # Add analytic vals after we put the model and solution in.
+        lam, lam_max, S6_lb, S6_ub = self._analytics_zo(d)
+        d['analytic_lambda_zo'] = lam
+        d['analytic_lambda_max_zo'] = lam_max
+        d['S6_lb_zo'] = S6_lb
+        d['S6_ub_zo'] = S6_ub
         return d
             
