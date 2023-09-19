@@ -661,6 +661,7 @@ class LinearMetabolicModel(object):
         S1, S2, S3 = sd['S1'], sd['S2'], sd['S3'], 
         S4, S5, S6 = sd['S4'], sd['S5'], sd['S6']
 
+        # S6 bounds
         # Handle lower bound first
         phi_term = (phi_O-1)
         b_term = (b + S5*g_ox*phi_term)
@@ -672,6 +673,22 @@ class LinearMetabolicModel(object):
         num = S1*g_ox*b_term + mC*g_ana*(b*N - (A*S1-N*S3)*phi_term*g_red)
         denom = g_ana*(b + S3*g_ox*phi_term)
         S6_ub = num / denom
+
+        # ZCorg bounds - lower bound first
+        zcb = sd['ZCB']
+        zcprod = sd['ZCprod']
+        phi_term = (-1 + phi_H + phi_O)
+        num2 = A*S2*g_red*phi_term
+        denom2 = (b + g_h*phi_H + S4*g_red*phi_term)
+        num1 = -2*S2*g_red*(b + g_h*phi_H + S5*g_ana*phi_term)
+        denom1 = g_ana*denom2
+        ZCorg_lb = (num1/denom1) + 2*mC*(-N + num2/denom2) + zcb
+        
+        # Now upper bound
+        num = g_ana*(b + g_h*phi_H + S3*g_ox*phi_term)*(2*N*mC - zcb)
+        num += g_ox*zcprod*(b + g_h*phi_H + A*mC*g_ana*phi_term + S5*g_ana*phi_term)
+        denom = g_ox*(b + g_h*phi_H) + g_ana*(-b - g_h*phi_H - (A*mC + S3 - S5)*g_ox*phi_term)
+        ZCorg_ub = num / denom
 
         # lambda calculated from interdependence of fluxes
         J_ox = sd['oxidation_flux']
@@ -690,7 +707,7 @@ class LinearMetabolicModel(object):
         denom -= ((S6/mC) - N - (S1*g_ox)/(mC*g_ana))*S34_term
         lam_max = -3600*num/denom
 
-        return lam, lam_max, S6_lb, S6_ub
+        return lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub
 
     def solution_as_dict(self, optimized_p, params):
         """Returns a dictionary of solution values for a solved problem.
@@ -758,10 +775,12 @@ class LinearMetabolicModel(object):
         d.update(params.as_dict())
 
         # Add analytic vals after we put the model and solution in.
-        lam, lam_max, S6_lb, S6_ub = self._analytics_zo(d)
+        lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
         d['analytic_lambda_zo'] = lam
         d['analytic_lambda_max_zo'] = lam_max
         d['S6_lb_zo'] = S6_lb
         d['S6_ub_zo'] = S6_ub
+        d['ZCorg_lb_zo'] = ZCorg_lb
+        d['ZCorg_ub_zo'] = ZCorg_ub
         return d
             

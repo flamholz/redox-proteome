@@ -36,7 +36,6 @@ class GrowthRateOptParamsTest(unittest.TestCase):
         self.assertEqual(opt.fixed_NAD, 1)
         self.assertEqual(opt.fixed_C_red, 1)
         
-
     def testMaintenance(self):
         opt = GrowthRateOptParams(maintenance_cost=1)
         self.assertEqual(opt.maintenance_cost, 1)
@@ -126,9 +125,7 @@ class BasicModelTest(unittest.TestCase):
         optimum, problem = self.model.maximize_growth_rate(params)
 
         # Check the dictionary has some keys in it as expected.
-        soln_dict = self.model.solution_as_dict(problem, params)
-        soln_dict.update(self.model.model_as_dict())
-        soln_dict.update(params.as_dict())
+        soln_dict = self.model.results_as_dict(problem, params)
 
         process_names = self.model.S_df.index.values.tolist()
         for p in process_names:
