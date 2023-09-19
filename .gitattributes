@@ -1,0 +1,7 @@
+/data/genomes/Coli/MG1655/UP000000625_83333.xml filter=lfs diff=lfs merge=lfs -text
+/data/genomes/Scer/S288c/UP000002311_559292.xml filter=lfs diff=lfs merge=lfs -text
+/data/gtdb/r207/bac120_metadata_r207.tar.gz filter=lfs diff=lfs merge=lfs -text
+/data/gtdb/r207/bac120_metadata_r207.tsv filter=lfs diff=lfs merge=lfs -text
+/data/gtdb/r207/bac120_nosc_vals.csv filter=lfs diff=lfs merge=lfs -text
+/data/gtdb/r207/bac120_nosc_vals_wide.csv filter=lfs diff=lfs merge=lfs -text
+/data/physiology/madin_et_al/ncbi_taxmap.csv filter=lfs diff=lfs merge=lfs -text

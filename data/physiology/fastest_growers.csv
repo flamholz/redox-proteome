@@ -1,0 +1,13 @@
+﻿short_name,group,category,generation_time_hr,growth_rate_hr,tmp_C,reference,DOI,note
+C. ohadii,autotroph,Eukaryotic alga,2.45,0.282917217,35,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+C. ohadii,autotroph,Eukaryotic alga,2.23,0.310828332,35,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+C. ohadii,autotroph,Eukaryotic alga,2.76,0.251140283,35,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+V. natrigens,heterotroph,Heterotrophic bacteria,0.25,2.772588722,37,Weinstock et al. 2016,https://doi.org/10.1038/nmeth.3970,
+V. natrigens,heterotroph,Heterotrophic bacteria,0.163333333,4.243758248,37,Eagon 1961,https://doi.org/10.1128/jb.83.4.736-737.1962,
+V. natrigens,heterotroph,Heterotrophic bacteria,0.116666667,5.941261548,37,Maida 2013,https://doi.org/10.1128/genomea.00648-13,
+C. perfingens,heterotroph,Heterotrophic bacteria,0.25,2.772588722,37,Labbe & Huang 1995,https://doi.org/10.4315/0362-028X-58.12.1303,37 C on thioglycollate medium
+C. perfingens,heterotroph,Heterotrophic bacteria,0.236,2.937064324,37,Labbe & Huang 1996,https://doi.org/10.4315/0362-028X-58.12.1303,38 C on thioglycollate medium
+C. perfingens,heterotroph,Heterotrophic bacteria,0.312,2.221625579,37,Labbe & Huang 1997,https://doi.org/10.4315/0362-028X-58.12.1303,39 C on thioglycollate medium
+E. coli,heterotroph,Heterotrophic bacteria,0.23,3.013683394,37,Bremer & Dennis 2008,https://doi.org/10.1128/ecosal.5.2.3,3 doublings per hour 
+S. elongatus PCC 11801,autotroph,Cyanobacteria,2.3,0.301368339,38,Jaiswal et al. 2018,https://doi.org/10.1038/s41598-018-34872-z,
+T. crunogena,autotroph,Chemoautotroph,0.8,0.866433976,25,Jannasch 1985,https://doi.org/10.1099/00207713-35-4-422,

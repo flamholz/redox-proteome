@@ -1,0 +1,4 @@
+﻿key,species,strain,refseq_id,ref_proteome_fname,extract_b_num,CDS_NOSC_csv_fname,KEGG_pathways_fname,KEGG_pathway_mapping_fname
+coli,E. coli,MG1655 K12,UP000000625,data/genomes/Coli/MG1655/UP000000625_83333.xml.gz,TRUE,data/genomes/Coli/MG1655/MG1655_ref_prot_NOSC.csv,data/genomes/Coli/KEGG_pathways.tsv,data/genomes/Coli/KEGG_pathway_mapping.tsv
+yeast,S. cerevisiae,S288c,UP000002311,data/genomes/Scer/S288c/UP000002311_559292.xml.gz,FALSE,data/genomes/Scer/S288c/S288c_ref_prot_NOSC.csv,data/genomes/Scer/KEGG_pathways.tsv,data/genomes/Scer/KEGG_pathway_mapping.tsv
+PCC6803,Synechocystis sp.,PCC6803,UP000001425,data/genomes/Synechocystis/PCC6803/UP000001425_1111708.xml.gz,FALSE,data/genomes/Synechocystis/PCC6803/PCC6803_ref_prot_NOSC.csv,data/genomes/Synechocystis/KEGG_pathways.tsv,data/genomes/Synechocystis/KEGG_pathway_mapping.tsv

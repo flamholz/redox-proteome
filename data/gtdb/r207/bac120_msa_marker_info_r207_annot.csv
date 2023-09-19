@@ -1,0 +1,121 @@
+gene_id,Marker Id,Name,Description,Length (bp),Single copy (%),Ubiquity (%),COG,COG_note,membrane_protein
+TIGR00006,TIGR_TIGR00006,TIGR00006,16S rRNA (cytosine(1402)-N(4))-methyltransferase,310,95.97,98.17,J,,FALSE
+TIGR00138,TIGR_TIGR00138,rsmG_gidB,16S rRNA (guanine(527)-N(7))-methyltransferase RsmG,183,91.83,92.3,J,,FALSE
+TIGR00095,TIGR_TIGR00095,TIGR00095,16S rRNA (guanine(966)-N(2))-methyltransferase RsmD,194,95.23,95.57,J,,FALSE
+TIGR02273,TIGR_TIGR02273,16S_RimM,16S rRNA processing protein RimM,166,91.87,92.09,J,,FALSE
+TIGR03625,TIGR_TIGR03625,L3_bact,50S ribosomal protein uL3,202,94.21,94.54,J,,FALSE
+TIGR03953,TIGR_TIGR03953,rplD_bact,50S ribosomal protein uL4,188,94.1,94.43,J,,FALSE
+TIGR00928,TIGR_TIGR00928,purB,adenylosuccinate lyase,436,87.66,91.99,F,,FALSE
+TIGR00344,TIGR_TIGR00344,alaS,alanine--tRNA ligase,847,96.43,97.13,J,,FALSE
+TIGR00456,TIGR_TIGR00456,argS,arginine--tRNA ligase,569,94.51,97.46,J,,FALSE
+TIGR00459,TIGR_TIGR00459,aspS_bact,aspartate--tRNA ligase,586,93.85,95.97,J,,FALSE
+TIGR01039,TIGR_TIGR01039,atpD,"ATP synthase F1, beta subunit",462,87.83,92.65,C,,FALSE
+TIGR01146,TIGR_TIGR01146,ATPsyn_F1gamma,"ATP synthase F1, gamma subunit",286,88.05,93.08,C,,FALSE
+TIGR00382,TIGR_TIGR00382,clpX,"ATP-dependent Clp protease, ATP-binding subunit ClpX",414,90.27,94.5,O,,FALSE
+TIGR00643,TIGR_TIGR00643,recG,ATP-dependent DNA helicase RecG,629,94.32,94.59,L,,FALSE
+TIGR00065,TIGR_TIGR00065,ftsZ,cell division protein FtsZ,353,93.2,96.43,D,,FALSE
+TIGR02350,TIGR_TIGR02350,prok_dnaK,chaperone protein DnaK,596,91.62,95.15,J,,FALSE
+TIGR00362,TIGR_TIGR00362,DnaA,chromosomal replication initiator protein DnaA,437,95,96.63,L,,FALSE
+TIGR00337,TIGR_TIGR00337,PyrG,CTP synthase,526,93.39,94.25,F,,FALSE
+TIGR00435,TIGR_TIGR00435,cysS,cysteine--tRNA ligase,466,94.08,97.18,J,,FALSE
+TIGR01063,TIGR_TIGR01063,gyrA,"DNA gyrase, A subunit",800,93.94,94.77,L,,FALSE
+TIGR01059,TIGR_TIGR01059,gyrB,"DNA gyrase, B subunit",639,92.59,94.83,L,,FALSE
+TIGR00593,TIGR_TIGR00593,pola,DNA polymerase I,890,95.72,96.12,L,,FALSE
+TIGR00663,TIGR_TIGR00663,dnan,"DNA polymerase III, beta subunit",367,93.26,96.62,L,,FALSE
+TIGR01128,TIGR_TIGR01128,holA,"DNA polymerase III, delta subunit",314,92.5,93.2,L,,FALSE
+TIGR02397,TIGR_TIGR02397,dnaX_nterm,"DNA polymerase III, subunit gamma and tau",355,95.54,97.09,L,,FALSE
+TIGR01391,TIGR_TIGR01391,dnaG,DNA primase,414,94.28,97.78,L,,FALSE
+TIGR00416,TIGR_TIGR00416,sms,DNA repair protein RadA,454,91.04,91.36,L,,FALSE
+TIGR00634,TIGR_TIGR00634,recN,DNA repair protein RecN,563,90.39,90.88,L,,FALSE
+TIGR02027,TIGR_TIGR02027,rpoA,"DNA-directed RNA polymerase, alpha subunit",298,94.79,96.32,K,,FALSE
+TIGR02013,TIGR_TIGR02013,rpoB,"DNA-directed RNA polymerase, beta subunit",1238,93.43,94.56,K,,FALSE
+TIGR02386,TIGR_TIGR02386,rpoC_TIGR,"DNA-directed RNA polymerase, beta' subunit",1147,91.37,91.63,K,,FALSE
+TIGR01393,TIGR_TIGR01393,lepA,elongation factor 4,595,95.49,97.5,J,,FALSE
+TIGR00631,TIGR_TIGR00631,uvrb,excinuclease ABC subunit B,658,95.79,96.97,L,,FALSE
+TIGR00194,TIGR_TIGR00194,uvrC,excinuclease ABC subunit C,574,94.88,96.72,L,,FALSE
+PF01025.20,PFAM_PF01025.20,GrpE,GrpE,166,94.45,97.81,O,,FALSE
+TIGR00436,TIGR_TIGR00436,era,GTP-binding protein Era,270,92.86,93.37,J,,FALSE
+TIGR01394,TIGR_TIGR01394,TypA_BipA,GTP-binding protein TypA/BipA,594,93.85,94.97,T,,FALSE
+TIGR00092,TIGR_TIGR00092,TIGR00092,GTP-binding protein YchF,368,96.2,96.97,J,,FALSE
+TIGR03263,TIGR_TIGR03263,guanyl_kin,guanylate kinase,180,94.76,95.12,F,,FALSE
+TIGR00442,TIGR_TIGR00442,hisS,histidine--tRNA ligase,406,94.79,97.01,J,,FALSE
+TIGR00084,TIGR_TIGR00084,ruvA,Holliday junction DNA helicase RuvA,192,95.74,95.99,L,,FALSE
+TIGR00635,TIGR_TIGR00635,ruvB,Holliday junction DNA helicase RuvB,305,96.13,96.6,L,,FALSE
+TIGR01302,TIGR_TIGR01302,IMP_dehydrog,inosine-5'-monophosphate dehydrogenase,450,89.65,92.13,F,,FALSE
+TIGR00392,TIGR_TIGR00392,ileS,isoleucine--tRNA ligase,861,93.51,95.95,J,,FALSE
+TIGR00396,TIGR_TIGR00396,leuS_bact,leucine--tRNA ligase,843,95.25,97.56,J,,FALSE
+TIGR00398,TIGR_TIGR00398,metG,methionine--tRNA ligase,530,93.72,97.39,J,,FALSE
+TIGR00460,TIGR_TIGR00460,fmt,methionyl-tRNA formyltransferase,315,95.34,96.37,J,,FALSE
+TIGR02729,TIGR_TIGR02729,Obg_CgtA,Obg family GTPase CgtA,329,96.65,97.38,J,,FALSE
+TIGR01510,TIGR_TIGR01510,coaD_prev_kdtB,pantetheine-phosphate adenylyltransferase,155,94.64,95.34,H,,FALSE
+TIGR00019,TIGR_TIGR00019,prfA,peptide chain release factor 1,361,96.62,96.82,J,,FALSE
+TIGR00020,TIGR_TIGR00020,prfB,peptide chain release factor 2,365,95.9,96.09,J,,FALSE
+TIGR00468,TIGR_TIGR00468,pheS,"phenylalanine--tRNA ligase, alpha subunit",324,96.75,97.06,J,,FALSE
+TIGR00472,TIGR_TIGR00472,pheT_bact,"phenylalanine--tRNA ligase, beta subunit",798,96.11,96.76,J,,FALSE
+TIGR00445,TIGR_TIGR00445,mraY,phospho-N-acetylmuramoyl-pentapeptide-transferase,321,94.63,95.52,M,,FALSE
+PF03726.15,PFAM_PF03726.15,PNPase,"Polyribonucleotide nucleotidyltransferase, RNA binding domain",83,92.26,92.56,J,,FALSE
+TIGR00963,TIGR_TIGR00963,secA,"preprotein translocase, SecA subunit",787,92.73,95.21,U,,FALSE
+TIGR00964,TIGR_TIGR00964,secE_bact,"preprotein translocase, SecE subunit",57,89.95,90.29,U,,TRUE
+TIGR00810,TIGR_TIGR00810,secG,"preprotein translocase, SecG subunit",73,93.37,93.8,U,,TRUE
+TIGR00967,TIGR_TIGR00967,3a0501s007,"preprotein translocase, SecY subunit",414,93.88,95.32,U,,TRUE
+TIGR02012,TIGR_TIGR02012,tigrfam_recA,protein RecA,321,93.12,97.59,L,,FALSE
+TIGR00539,TIGR_TIGR00539,hemN_rel,putative oxygen-independent coproporphyrinogen III oxidase,361,91.4,91.81,H,,FALSE
+TIGR00250,TIGR_TIGR00250,RNAse_H_YqgF,putative transcription antitermination factor YqgF,130,95.04,95.4,J,COG gives J K L,FALSE
+TIGR00615,TIGR_TIGR00615,recR,recombination protein RecR,196,96.41,96.74,L,,FALSE
+TIGR00083,TIGR_TIGR00083,ribF,riboflavin biosynthesis protein RibF,290,91.82,95.11,H,assigned based on other riboflavin biosynthesis,FALSE
+TIGR02191,TIGR_TIGR02191,RNaseIII,ribonuclease III,219,94.32,94.89,J,,FALSE
+TIGR00059,TIGR_TIGR00059,L17,ribosomal protein bL17,112,96.07,96.46,J,,FALSE
+TIGR01032,TIGR_TIGR01032,rplT_bact,ribosomal protein bL20,114,96.67,97.09,J,,FALSE
+TIGR00061,TIGR_TIGR00061,L21,ribosomal protein bL21,101,95.86,96.24,J,,FALSE
+TIGR00158,TIGR_TIGR00158,L9,ribosomal protein bL9,148,96.08,96.65,J,,FALSE
+TIGR00717,TIGR_TIGR00717,rpsA,ribosomal protein bS1,516,89.26,91.13,J,,FALSE
+TIGR00029,TIGR_TIGR00029,S20,ribosomal protein bS20,87,89.61,89.89,J,,FALSE
+TIGR00166,TIGR_TIGR00166,S6,ribosomal protein bS6,95,96.59,97.05,J,,FALSE
+PF00466.21,PFAM_PF00466.21,Ribosomal_L10,Ribosomal protein L10,100,94.49,94.86,J,,FALSE
+PF00410.20,PFAM_PF00410.20,Ribosomal_S8,Ribosomal protein S8,126,94.33,94.87,J,,FALSE
+PF00380.20,PFAM_PF00380.20,Ribosomal_S9,Ribosomal protein S9/S16,121,96.37,96.95,J,,FALSE
+TIGR01169,TIGR_TIGR01169,rplA_bact,ribosomal protein uL1,227,93.88,94.31,J,,FALSE
+TIGR01632,TIGR_TIGR01632,L11_bact,ribosomal protein uL11,140,93.66,93.96,J,,FALSE
+TIGR01066,TIGR_TIGR01066,rplM_bact,ribosomal protein uL13,141,96.59,96.91,J,,FALSE
+TIGR01071,TIGR_TIGR01071,rplO_bact,ribosomal protein uL15,144,94.05,94.44,J,,FALSE
+TIGR01164,TIGR_TIGR01164,rplP_bact,ribosomal protein uL16,126,93.16,93.59,J,,FALSE
+TIGR01171,TIGR_TIGR01171,rplB_bact,ribosomal protein uL2,275,94,94.39,J,,FALSE
+TIGR01044,TIGR_TIGR01044,rplV_bact,ribosomal protein uL22,103,93.75,94.04,J,,FALSE
+TIGR01079,TIGR_TIGR01079,rplX_bact,ribosomal protein uL24,104,94.14,94.47,J,,FALSE
+TIGR03654,TIGR_TIGR03654,L6_bact,ribosomal protein uL6,175,94.12,94.37,J,,FALSE
+TIGR03632,TIGR_TIGR03632,uS11_bact,ribosomal protein uS11,117,85.68,85.94,J,,FALSE
+TIGR01011,TIGR_TIGR01011,rpsB_bact,ribosomal protein uS2,225,96.35,97.23,J,,FALSE
+TIGR01009,TIGR_TIGR01009,rpsC_bact,ribosomal protein uS3,212,93.95,94.5,J,,FALSE
+TIGR01017,TIGR_TIGR01017,rpsD_bact,ribosomal protein uS4,200,94.58,96.14,J,,FALSE
+TIGR01021,TIGR_TIGR01021,rpsE_bact,ribosomal protein uS5,156,94.69,94.97,J,,FALSE
+TIGR01029,TIGR_TIGR01029,rpsG_bact,ribosomal protein uS7,154,93.92,94.26,J,,FALSE
+TIGR00755,TIGR_TIGR00755,ksgA,ribosomal RNA small subunit methyltransferase A,256,96.43,96.66,J,,FALSE
+TIGR00496,TIGR_TIGR00496,frr,ribosome recycling factor,176,97.57,97.83,J,,FALSE
+TIGR00090,TIGR_TIGR00090,rsfS_iojap_ybeB,ribosome silencing factor,99,93.58,93.81,J,,FALSE
+TIGR03594,TIGR_TIGR03594,GTPase_EngA,ribosome-associated GTPase EngA,432,95.79,96.09,J,,FALSE
+TIGR00082,TIGR_TIGR00082,rbfA,ribosome-binding factor A,115,96.27,96.57,J,,FALSE
+PF02576.18,PFAM_PF02576.18,DUF150,RimP N-terminal domain,73,90.31,90.67,J,ribosome maturation factor,FALSE
+TIGR00054,TIGR_TIGR00054,TIGR00054,RIP metalloprotease RseP,421,94.37,96.57,O,"COG gives K O, membrane associated protease regulating a sigma factor",FALSE
+TIGR00186,TIGR_TIGR00186,rRNA_methyl_3,"RNA methyltransferase, TrmH family, group 3",240,90.99,92.18,J,TIGRFAM indicates this methylates the 23S rRNA,FALSE
+TIGR00043,TIGR_TIGR00043,TIGR00043,rRNA maturation RNase YbeY,111,96.37,96.8,J,,FALSE
+TIGR00414,TIGR_TIGR00414,serS,serine--tRNA ligase,418,94.22,96.95,J,,FALSE
+TIGR00959,TIGR_TIGR00959,ffh,signal recognition particle protein,428,93.62,93.75,U,,FALSE
+TIGR00064,TIGR_TIGR00064,ftsY,signal recognition particle-docking protein FtsY,279,94.17,94.33,U,,FALSE
+TIGR00086,TIGR_TIGR00086,smpB,SsrA-binding protein,144,96.4,96.89,O,,FALSE
+TIGR01951,TIGR_TIGR01951,nusB,transcription antitermination factor NusB,131,96.03,96.26,K,,FALSE
+TIGR01953,TIGR_TIGR01953,NusA,transcription termination factor NusA,340,97.25,97.58,K,,FALSE
+TIGR00922,TIGR_TIGR00922,nusG,transcription termination/antitermination factor NusG,172,93.55,93.81,K,,FALSE
+TIGR00580,TIGR_TIGR00580,mfd,transcription-repair coupling factor,923,93.73,94.5,L,COG gives K L,FALSE
+TIGR00116,TIGR_TIGR00116,tsf,translation elongation factor Ts,293,96.55,97.12,J,,FALSE
+TIGR00487,TIGR_TIGR00487,IF-2,translation initiation factor IF-2,587,97.19,97.57,J,,FALSE
+TIGR00168,TIGR_TIGR00168,infC,translation initiation factor IF-3,165,95.91,96.99,J,,FALSE
+TIGR00115,TIGR_TIGR00115,tig,trigger factor,410,93.4,96.12,O,,FALSE
+TIGR00420,TIGR_TIGR00420,trmU,tRNA (5-methylaminomethyl-2-thiouridylate)-methyltransferase,351,93.88,95.92,J,,FALSE
+TIGR00088,TIGR_TIGR00088,trmD,tRNA (guanine(37)-N(1))-methyltransferase,233,96.82,97.92,J,,FALSE
+TIGR00431,TIGR_TIGR00431,TruB,tRNA pseudouridine(55) synthase,210,94.97,95.66,J,,FALSE
+TIGR03723,TIGR_TIGR03723,T6A_TsaD_YgjD,tRNA threonylcarbamoyl adenosine modification protein TsaD,314,95.32,95.82,J,,FALSE
+TIGR03725,TIGR_TIGR03725,T6A_YeaZ,tRNA threonylcarbamoyl adenosine modification protein YeaZ,212,91.78,92.09,J,,FALSE
+TIGR02432,TIGR_TIGR02432,lysidine_TilS_N,tRNA(Ile)-lysidine synthetase,189,94.28,95.24,J,,FALSE
+TIGR01082,TIGR_TIGR01082,murC,UDP-N-acetylmuramate--L-alanine ligase,449,94.37,95.02,M,,FALSE
+TIGR01087,TIGR_TIGR01087,murD,UDP-N-acetylmuramoylalanine--D-glutamate ligase,441,95.29,95.89,M,,FALSE
+TIGR02075,TIGR_TIGR02075,pyrH_bact,UMP kinase,233,94.04,95.57,F,,FALSE

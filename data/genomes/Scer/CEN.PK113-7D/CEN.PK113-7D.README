@@ -1,0 +1,19 @@
+Preliminary Release of S. cerevisiae strain CEN.PK sequences.
+
+12/7/2012
+
+This directory contains 4 files describing the genome of CEN.PK-derivative S. cerevisiae 
+strain 113-7D (PMID: 22448915; WGS ID: AEHG00000000). The files are:
+
+a genome fasta file: CEN.PK113-7D_Delft_2012_AEHG00000000.fsa
+a nucleic acid coding sequence file: CEN.PK113-7D_AEHG00000000_cds.fsa
+a protein sequence file: CEN.PK113-7D_AEHG00000000_pep.fsa
+a GFF file: CEN.PK113-7D_AEHG00000000.gff
+
+Feature definitions (for coding sequences and features in the gff file) were
+assigned using Jim Kent's liftOver program with a blat alignment vs. the R64
+(current) S288C reference sequence.
+
+This assembly contains 589 contigs (coverage: 18X, mean contig size: 19694,
+N50: 61 kb). Using liftOver, 6528 SGD gene features were found in the assembly.
+
