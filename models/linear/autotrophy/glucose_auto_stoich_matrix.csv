@@ -1,5 +1,3 @@
-﻿process,C_red,C_ox,E_ox,E_red,EC,ECH,ADP,ATP,biomass,kcat_s,m_kDa,note
-oxidation,0,0,0.25,-0.25,-0.5,0.5,-0.75,0.75,0,200,100,"photosynthetic water oxidation; donor/acceptor written as 4e- transfer. Z-scheme usually written as making 3 ATP per O2 => 0.75 ATP/e-. Made the cost per 4e- same as oxidation for a baseline, hence higher kcat, since 1/4 as much e-"
-reduction,1,-1,0,0,2,-2,3,-3,0,50,100,need 4e- to go from +4 to ZC=0. CBB cycle uses 3 ATP/C. 
-anabolism,-1,0,0,0,0,0,0.3,-0.3,1,50,100,"anabolism from glucose, assume biomass redox ≈ 0 = glucose as a baseline. Biomass is in units of C atoms"
-cyclic_flow,0,0,0,0,0,0,-1,1,0,50,100,"cyclic flow can make ATP without NADH, i.e. process is on average redox balanced."
+version https://git-lfs.github.com/spec/v1
+oid sha256:747379789a1bb85146cce0fc36920633bebc9b34161aa3a8fdbab87c19214e94
+size 733
