@@ -610,7 +610,11 @@ class LinearMetabolicModel(object):
             two-tuple of (lambda, problem object). lambda = 0 when infeasible.
         """
         p = self.max_growth_rate_problem(gr_opt_params)
-        soln = p.solve()
+        try:
+            soln = p.solve()
+        except cp.SolverError:
+            return 0, p
+        
         if p.status in ("infeasible", "unbounded"):
             return 0, p
         
@@ -775,7 +779,13 @@ class LinearMetabolicModel(object):
         d.update(params.as_dict())
 
         # Add analytic vals after we put the model and solution in.
-        lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
+        # Note: we rely on the optimization to populate a few values
+        # used in the analytic calculation, so success is required.
+        if optimized_p.status == cp.OPTIMAL:
+            lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
+        else:
+            lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = (
+                np.NAN, np.NAN, np.NAN, np.NAN, np.NAN, np.NAN)
         d['analytic_lambda_zo'] = lam
         d['analytic_lambda_max_zo'] = lam_max
         d['S6_lb_zo'] = S6_lb
