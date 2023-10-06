@@ -56,7 +56,7 @@ for lam_val in lambdas:
 phi_df = pd.DataFrame(results)
 phi_df['expected_Jana'] = phi_df['anabolism_gamma']*phi_df['anabolism_phi']
 phi_df['expected_lambda'] = MW_C_ATOM*3600*phi_df['expected_Jana']
-phi_df.to_csv('../output/Fig2A_variable_lambda.csv')
+phi_df.to_csv('../output/Fig2A_variable_lambda.csv', index=False)
 
 print('Optimizing over a range of fixed Z_C,B values...')
 # Sweep a range of biomass ZC values
@@ -86,7 +86,7 @@ for z in ZCBs:
     results.append(d)
 
 S6_sensitivity_df = pd.DataFrame(results)
-S6_sensitivity_df.to_csv('../output/FigX_variable_ZCB.csv')
+S6_sensitivity_df.to_csv('../output/FigX_variable_ZCB.csv', index=False)
 
 # Test variable carbon source redox
 # TODO: rename ZCorg to ZCred throughout
@@ -117,11 +117,13 @@ for z in ZCorgs:
     results.append(d)
 
 zcorg_sensitivity_df = pd.DataFrame(results)
-zcorg_sensitivity_df.to_csv('../output/Fig2B_variable_ZCred.csv')
+zcorg_sensitivity_df.to_csv('../output/Fig2B_variable_ZCred.csv', index=False)
 
 print('Sweeping pairs of (Z_C,red, S4) values...')
 ZCorgs = np.arange(-3, 3.01, 0.05)
-S4vals = np.arange(0.2, 1.21, 0.2)
+
+# Default S4 = 1.0 -- put at midpoint of sweep
+S4vals = np.arange(0.5, 1.51, 0.25)
 
 results = []
 lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
@@ -149,14 +151,17 @@ for S4 in S4vals:
         results.append(d)
 
 zcorg_sensitivity_var_s4 = pd.DataFrame(results)
-zcorg_sensitivity_var_s4.to_csv('../output/Fig4A_variable_ZCorg_var_S4.csv')
+zcorg_sensitivity_var_s4.to_csv('../output/Fig3A_variable_ZCorg_var_S4.csv', index=False)
 
 print('Sweeping pairs of (Z_C,red, S3) values...')
 ZCorgs = np.arange(-3, 3.01, 0.05)
-S3vals = np.arange(-0.1, 0.91, 0.2)
+
+# Default S3 = 0.5 ATP/ -- include in sweep
+S3vals = np.arange(-0.25, 1.251, 0.25)
 
 results = []
 lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+print("Default S3: ", lmm.get_ATP_yield('oxidation'))
 
 for S3 in S3vals:
     for z in ZCorgs:
@@ -181,14 +186,16 @@ for S3 in S3vals:
         results.append(d)
 
 zcorg_sensitivity_var_s3 = pd.DataFrame(results)
-zcorg_sensitivity_var_s3.to_csv('../output/Fig4B_variable_ZCorg_var_S3.csv')
+zcorg_sensitivity_var_s3.to_csv('../output/Fig3B_variable_ZCorg_var_S3.csv', index=False)
 
 print('Sweeping pairs of (Z_C,red, Z_C,B) values...')
 ZCorgs = np.arange(-3, 3.01, 0.05)
+# Default ZCB = 0.0 -- put at midpoint of sweep
 ZCBs = np.arange(-0.5, 0.51, 0.1)
 
 results = []
 lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+print("Default S4: ", lmm.get_ATP_yield('reduction'))
 
 for zcb in ZCBs:
     for zcorg in ZCorgs:
@@ -213,7 +220,7 @@ for zcb in ZCBs:
         results.append(d)
 
 zcorg_sensitivity_var_zcb = pd.DataFrame(results)
-zcorg_sensitivity_var_zcb.to_csv('../output/Fig4C_variable_ZCorg_var_ZCB.csv')
+zcorg_sensitivity_var_zcb.to_csv('../output/Fig3C_variable_ZCorg_var_ZCB.csv', index=False)
 
 
 print('Loading autotrophy model...')
@@ -260,4 +267,4 @@ gamma_df = pd.DataFrame(results)
 gamma_df['mass_kDa'] = pmasses
 gamma_df['model'] = 'heterotrophy'
 gamma_df = pd.concat([gamma_df, auto_gamma_df])
-gamma_df.to_csv('../output/Fig2C_autotrophy_comparison.csv')
+gamma_df.to_csv('../output/Fig2C_autotrophy_comparison.csv', index=False)

@@ -15,6 +15,7 @@ __author__ = "Avi I. Flamholz"
 MW_C_ATOM       = 12.0  # molar mass of a carbon atom [g/mol]
 S_PER_HR        = 60*60 # seconds per hour 
 GC_PER_GDW      = 0.5   # g carbon per g dry weight
+# TODO: double check this value
 GC_PER_GPROTEIN = 0.5   # g carbon per g protein
 
 
@@ -386,7 +387,7 @@ class LinearMetabolicModel(object):
 
         Args:
             new_ZCorg: float new Z_C,org value
-            heterotroph: boolean, whether considered a 
+            heterotroph: boolean, whether considering a 
                 heterotroph or autotroph.
         """
         new_SX = (self.ZCprod - new_ZCorg)/2
@@ -437,6 +438,10 @@ class LinearMetabolicModel(object):
         # check C and e- balancing
         self._check_c_balance()
         self._check_e_balance()
+
+    def get_ATP_yield(self, process):
+        """Returns the ATP cost or yield of a process."""
+        return self.S_df.at[process, 'ATP']
 
     def set_ATP_yield(self, process, new_yield):
         """Sets the ATP cost or yield of a process.
@@ -568,7 +573,7 @@ class LinearMetabolicModel(object):
         # and the ratio of grams cell per gram C. Finally we convert /s to /hr.
         # If we assume the biomass C fraction is fixed, this exactly equals the growth rate
         ana_idx = self.S_df.index.get_loc('anabolism')   
-        growth_rate_s = Js[ana_idx]*MW_C_ATOM     
+        growth_rate_s = Js[ana_idx]*MW_C_ATOM
         growth_rate_hr = growth_rate_s*S_PER_HR
         obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
 
@@ -600,7 +605,7 @@ class LinearMetabolicModel(object):
         # Construct the problem and return
         return cp.Problem(obj, constraints)
     
-    def maximize_growth_rate(self, gr_opt_params):
+    def maximize_growth_rate(self, gr_opt_params, solver='GUROBI'):
         """Maximize growth rate at fixed phi_o.
 
         Args:
@@ -610,10 +615,11 @@ class LinearMetabolicModel(object):
             two-tuple of (lambda, problem object). lambda = 0 when infeasible.
         """
         p = self.max_growth_rate_problem(gr_opt_params)
-        try:
-            soln = p.solve()
-        except cp.SolverError:
-            return 0, p
+        soln = p.solve(solver=solver)
+        #try:
+        #    soln = p.solve()
+        #except cp.SolverError:
+        #    return 0, p
         
         if p.status in ("infeasible", "unbounded"):
             return 0, p
@@ -781,11 +787,12 @@ class LinearMetabolicModel(object):
         # Add analytic vals after we put the model and solution in.
         # Note: we rely on the optimization to populate a few values
         # used in the analytic calculation, so success is required.
-        if optimized_p.status == cp.OPTIMAL:
-            lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
-        else:
-            lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = (
-                np.NAN, np.NAN, np.NAN, np.NAN, np.NAN, np.NAN)
+        #if optimized_p.status == cp.OPTIMAL:
+        #    lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
+        #else:
+        #    lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = (
+        #        np.NAN, np.NAN, np.NAN, np.NAN, np.NAN, np.NAN)
+        lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
         d['analytic_lambda_zo'] = lam
         d['analytic_lambda_max_zo'] = lam_max
         d['S6_lb_zo'] = S6_lb
