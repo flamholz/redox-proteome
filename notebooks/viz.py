@@ -12,6 +12,9 @@ import seaborn as sns
 import altair as alt
 import bokeh.io
 
+AX_FACECOLOR = '#E3DCD0'
+
+
 # Style and useful function definitions.
 def titlebox(
     ax, text, color, bgcolor=None, size=8, boxsize=0.1, pad=0.05, loc=10, **kwargs
