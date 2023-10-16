@@ -232,18 +232,21 @@ auto_S_fname = path.join(auto_model_dir, 'glucose_auto_stoich_matrix.csv')
 auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
 lam = LinearMetabolicModel.FromFiles(m_fname, S_fname)
 
-print('Comparing autotrophy and heterotrophy over a range of gamma values...')
-# Each model is defined by a set of processes that have 
-# mass specific catalytic rates (gamma = k/mass). 
-# here we set the process masses to a range of values
-pmasses = np.logspace(2, 5, 50)  # kDa units
+print('Comparing autotrophy and heterotrophy with sampled gamma values...')
+# Sample sets of 3 process mass (kDa units) from a lognormal distribution
+# for oxidation, reduction, anabolism. This has the effect of changing 
+# gamma for these processes, but not for homeostasis/CEF.
+np.random.seed(42)
+pmasses = np.random.lognormal(mean=np.log(1000), sigma=np.log(3), size=(3,100))
+pmasses[np.where(pmasses <= 0)] = 1
 
 auto_results = []
 results = []
-for pmass in pmasses:
-    # Set the process masses
-    auto_lam.set_process_masses(pmass)
-    lam.set_process_masses(pmass)
+for idx in range(100):
+    # Set the process masses to the sampled values for both models
+    for pmass, process in zip(pmasses[:,idx], 'oxidation,reduction,anabolism'.split(',')):
+        auto_lam.set_process_mass(process, pmass)
+        lam.set_process_mass(process, pmass)
     
     # Make fresh parameters with a new max_lambda_hr
     params = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True, 
@@ -260,11 +263,120 @@ for pmass in pmasses:
     d = auto_lam.results_as_dict(auto_opt_prob, params)
     auto_results.append(d)
 
+# Output files are in the same order -- can match up model runs that way.
 auto_gamma_df = pd.DataFrame(auto_results)
-auto_gamma_df['mass_kDa'] = pmasses
 auto_gamma_df['model'] = 'autotrophy'
+auto_gamma_df.to_csv('../output/Fig2C_autotrophy_samples.csv', index=False)
+
 gamma_df = pd.DataFrame(results)
-gamma_df['mass_kDa'] = pmasses
 gamma_df['model'] = 'heterotrophy'
-gamma_df = pd.concat([gamma_df, auto_gamma_df])
-gamma_df.to_csv('../output/Fig2C_autotrophy_comparison.csv', index=False)
+gamma_df.to_csv('../output/Fig2C_heterotrophy_samples.csv', index=False)
+
+
+print('Optimizing the autotrophy model over a range of ZCred values...')
+ZCreds = np.arange(-2, 2.01, 0.05)
+
+# Load models of auto and heterotrophy for comparison
+auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
+
+results = []
+for zcorg in ZCreds:
+    my_lam = auto_lam.copy()
+    my_lam.set_ZCorg(zcorg, heterotroph=False)
+    # Make fresh parameters with a new max_lambda_hr
+    params = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True, 
+                                 fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                 fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+
+    # Optimizing the heterotrophic growth rate given the parameters
+    opt, opt_prob = my_lam.maximize_growth_rate(params)
+    d = my_lam.results_as_dict(opt_prob, params)
+    results.append(d)
+
+zcred_auto_df = pd.DataFrame(results)
+zcred_auto_df.to_csv('../output/FigSX_autotrophy_ZCred.csv', index=False)
+
+
+print('Optimizing over a range of min_phi_O values...')
+phi_Os = np.arange(0, 0.6, 0.01)
+
+results = []
+lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+
+for phi_O in phi_Os:
+    # Test with and without ATP homeostasis -- first with
+    ref_lam = lmm.copy()
+    # Note we are fixing phi_O here to highlight the contribution of phi_H
+    params = GrowthRateOptParams(phi_O=phi_O, do_dilution=True,
+                                 fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                 fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    m, opt_p = ref_lam.maximize_growth_rate(params)
+    d = ref_lam.results_as_dict(opt_p, params)
+    results.append(d)
+
+    # Now without -- seting max_phi_H = 0
+    params_nh = GrowthRateOptParams(phi_O=phi_O, do_dilution=True, max_phi_H=0,
+                                    fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                    fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    m, opt_p = ref_lam.maximize_growth_rate(params_nh)
+    d = ref_lam.results_as_dict(opt_p, params_nh)
+    results.append(d)
+
+phi_O_sensitivity_df = pd.DataFrame(results)
+phi_O_sensitivity_df.to_csv('../output/Fig2S1_variable_phi_O.csv', index=False)
+
+
+print('Optimizing over a range of gamma_ana values...')
+mKdas = np.logspace(2, 4, 50)
+
+results = []
+lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+
+for ana_kDa in mKdas:
+    # Test with and without ATP homeostasis -- first with
+    ref_lam = lmm.copy()
+    ref_lam.set_process_mass('anabolism', ana_kDa)
+    # Note we are fixing phi_O here to highlight the contribution of phi_H
+    params = GrowthRateOptParams(phi_O=0.4, do_dilution=True,
+                                 fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                 fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    m, opt_p = ref_lam.maximize_growth_rate(params)
+    d = ref_lam.results_as_dict(opt_p, params)
+    results.append(d)
+
+    # Now without -- seting max_phi_H = 0
+    params_nh = GrowthRateOptParams(phi_O=0.4, do_dilution=True, max_phi_H=0,
+                                    fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                    fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    m, opt_p = ref_lam.maximize_growth_rate(params_nh)
+    d = ref_lam.results_as_dict(opt_p, params_nh)
+    results.append(d)
+
+g_ana_sensitivity_df = pd.DataFrame(results)
+g_ana_sensitivity_df.to_csv('../output/Fig2S1_variable_g_ana.csv', index=False)
+
+print('Optimizing over a range of gamma_red values...')
+results = []
+lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+for red_kDa in mKdas:
+    # Test with and without ATP homeostasis -- first with
+    ref_lam = lmm.copy()
+    ref_lam.set_process_mass('reduction', red_kDa)
+    # Note we are fixing phi_O here to highlight the contribution of phi_H
+    params = GrowthRateOptParams(phi_O=0.4, do_dilution=True,
+                                 fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                 fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    m, opt_p = ref_lam.maximize_growth_rate(params)
+    d = ref_lam.results_as_dict(opt_p, params)
+    results.append(d)
+
+    # Now without -- seting max_phi_H = 0
+    params_nh = GrowthRateOptParams(phi_O=0.4, do_dilution=True, max_phi_H=0,
+                                    fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                    fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    m, opt_p = ref_lam.maximize_growth_rate(params_nh)
+    d = ref_lam.results_as_dict(opt_p, params_nh)
+    results.append(d)
+
+g_red_sensitivity_df = pd.DataFrame(results)
+g_red_sensitivity_df.to_csv('../output/Fig2S1_variable_g_red.csv', index=False)
