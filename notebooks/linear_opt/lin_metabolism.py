@@ -193,7 +193,8 @@ class GrowthRateOptParams(object):
         fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
     """
     def __init__(self, do_dilution=False, rate_law=None,
-                 min_phi_O=None, phi_O=None, max_phi_H=None,
+                 min_phi_O=None, phi_O=None,
+                 phi_red=None, max_phi_H=None,
                  maintenance_cost=0, max_lambda_hr=None,
                  fixed_ATP=None, fixed_NADH=None,
                  fixed_ra=None, fixed_re=None, fixed_C_red=None):
@@ -203,8 +204,9 @@ class GrowthRateOptParams(object):
             do_dilution: boolean, whether to include dilution in the model.
             rate_law: RateLawFunctor, rate law to use. If None, uses zeroth order.
             min_phi_O: float, minimum C mass fraction for other processes.
-            phi_O: float, mass C fraction for other processes.
+            phi_O: float, C mass fraction for other processes.
                 Only one of min_phi_O and phi_O should be set.
+            phi_red: float, C mass fraction catalyzing reduction.
             max_phi_H: float, maximum C mass fraction for homeostasis.
             maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
@@ -230,6 +232,7 @@ class GrowthRateOptParams(object):
         self.do_dilution = do_dilution
         self.min_phi_O = min_phi_O or 0
         self.phi_O = phi_O
+        self.phi_red = phi_red
         self.max_phi_H = max_phi_H
         self.max_lambda_hr = max_lambda_hr
 
@@ -601,6 +604,10 @@ class LinearMetabolicModel(object):
         if params.max_phi_H is not None:
             h_index = self.S_df.index.get_loc('ATP_homeostasis')
             constraints.append(phis[h_index] <= params.max_phi_H)
+        if params.phi_red is not None:
+            # Fix the phi_red value
+            red_index = self.S_df.index.get_loc('reduction')
+            constraints.append(phis[red_index] == params.phi_red)
 
         # Construct the problem and return
         return cp.Problem(obj, constraints)

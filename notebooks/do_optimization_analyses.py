@@ -44,12 +44,8 @@ for lam_val in lambdas:
                                  max_lambda_hr=lam_val, max_phi_H=0,
                                  fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
                                  fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
-    p = params.copy()
-    p.max_lambda_hr = lam_val
-
     # Optimize the growth rate given the parameters
     opt, opt_prob = lam.maximize_growth_rate(params)
-
     d = lam.results_as_dict(opt_prob, params)
     results.append(d)
 
@@ -57,6 +53,29 @@ phi_df = pd.DataFrame(results)
 phi_df['expected_Jana'] = phi_df['anabolism_gamma']*phi_df['anabolism_phi']
 phi_df['expected_lambda'] = MW_C_ATOM*3600*phi_df['expected_Jana']
 phi_df.to_csv('../output/Fig2A_variable_lambda.csv', index=False)
+
+print('Optimizing over a range of fixed phi_red values...')
+phi_reds = np.linspace(1e-3, 1e-1, 100)
+results = []
+
+for phi_r in phi_reds:
+    # Make fresh parameters with a new max_lambda_hr
+    params = GrowthRateOptParams(min_phi_O=0.4, 
+                                 do_dilution=True, 
+                                 phi_red=phi_r,
+                                 fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                 fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    # Optimize the growth rate given the parameters
+    opt, opt_prob = lam.maximize_growth_rate(params)
+    if opt_prob.status != 'optimal':
+        print('Warning: optimization not optimal for phi_red = ', phi_r)
+        continue
+
+    d = lam.results_as_dict(opt_prob, params)
+    results.append(d)
+
+phi_df = pd.DataFrame(results)
+phi_df.to_csv('../output/Fig2S1_variable_phi_red.csv', index=False)
 
 print('Optimizing over a range of fixed Z_C,B values...')
 # Sweep a range of biomass ZC values
@@ -229,8 +248,12 @@ auto_m_fname = path.join(auto_model_dir, 'glucose_auto_molecular_props.csv')
 auto_S_fname = path.join(auto_model_dir, 'glucose_auto_stoich_matrix.csv')
 
 # Load models of auto and heterotrophy for comparison
-auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
 lam = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
+
+# A model of autotrophy where we don't enforce Cred homeostasis at all
+auto_lam_ext_C = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
+auto_lam_ext_C.m_df.loc['C_red', 'internal'] = 0
 
 print('Comparing autotrophy and heterotrophy with sampled gamma values...')
 # Sample sets of 3 process mass (kDa units) from a lognormal distribution
@@ -241,11 +264,13 @@ pmasses = np.random.lognormal(mean=np.log(1000), sigma=np.log(3), size=(3,100))
 pmasses[np.where(pmasses <= 0)] = 1
 
 auto_results = []
+auto_ext_C_results = []
 results = []
 for idx in range(100):
-    # Set the process masses to the sampled values for both models
+    # Set the process masses to the sampled values for all models
     for pmass, process in zip(pmasses[:,idx], 'oxidation,reduction,anabolism'.split(',')):
         auto_lam.set_process_mass(process, pmass)
+        auto_lam_ext_C.set_process_mass(process, pmass)
         lam.set_process_mass(process, pmass)
     
     # Make fresh parameters with a new max_lambda_hr
@@ -259,14 +284,34 @@ for idx in range(100):
     results.append(d)
 
     # Optimize the autotrophic growth rate given the parameters
-    auto_opt, auto_opt_prob = auto_lam.maximize_growth_rate(params)
-    d = auto_lam.results_as_dict(auto_opt_prob, params)
-    auto_results.append(d)
+    # First run an autotrophic model where we don't enforce mass balance of 
+    # internally produced organic carbon. 
+    auto_params = params.copy()
+    auto_opt, auto_opt_prob = auto_lam_ext_C.maximize_growth_rate(auto_params)
+    d = auto_lam_ext_C.results_as_dict(auto_opt_prob, auto_params)
+    auto_ext_C_results.append(d)
+
+    # Now models with mass balance of Cred enforced at various concs. 
+    # Need to set the reduced C concentration because we dilute 
+    # intracellular metabolites and Cred is intracellular in autotrophy.
+    # Setting a range of Cred concentrations. Middle value of 1e-6 
+    # is a biologically reasonable value of ≈ 1 mM. 
+    for c_red in [1e-12, 1e-6, 0.1]:
+        auto_params = params.copy()
+        auto_params.fixed_C_red = c_red
+        auto_opt, auto_opt_prob = auto_lam.maximize_growth_rate(auto_params)
+    
+        d = auto_lam.results_as_dict(auto_opt_prob, auto_params)
+        auto_results.append(d)
 
 # Output files are in the same order -- can match up model runs that way.
 auto_gamma_df = pd.DataFrame(auto_results)
 auto_gamma_df['model'] = 'autotrophy'
 auto_gamma_df.to_csv('../output/Fig2C_autotrophy_samples.csv', index=False)
+
+auto_gamma_ext_C_df = pd.DataFrame(auto_ext_C_results)
+auto_gamma_ext_C_df['model'] = 'autotrophy_ext_C'
+auto_gamma_ext_C_df.to_csv('../output/Fig2C_autotrophy_ext_C_samples.csv', index=False)
 
 gamma_df = pd.DataFrame(results)
 gamma_df['model'] = 'heterotrophy'
