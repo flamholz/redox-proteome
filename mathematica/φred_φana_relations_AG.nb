@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     56825,       1400]
-NotebookOptionsPosition[     54614,       1361]
-NotebookOutlinePosition[     55036,       1378]
-CellTagsIndexPosition[     54993,       1375]
+NotebookDataLength[     71648,       1733]
+NotebookOptionsPosition[     69209,       1690]
+NotebookOutlinePosition[     69627,       1707]
+CellTagsIndexPosition[     69584,       1704]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -1248,7 +1248,7 @@ Cell[BoxData[{
     RowBox[{"Collect", "[", 
      RowBox[{"phiRedExpression", ",", 
       SubscriptBox["\[Phi]", "ana"]}], "]"}]}], ";"}], 
-  "\[IndentingNewLine]"}], "\n", 
+  "\n"}], "\[IndentingNewLine]", 
  RowBox[{"slope", "=", 
   RowBox[{"Coefficient", "[", 
    RowBox[{"collectedExpr", ",", 
@@ -1357,10 +1357,339 @@ Cell[BoxData[
    3.907826890360384*^9},
  CellLabel->
   "Out[481]=",ExpressionUUID->"e4a173ff-d378-4064-beab-863a23326ca3"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Manipulate", "[", 
+   RowBox[{
+    RowBox[{"Module", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"phiRedExpression", ",", "phiRedSubstituted"}], "}"}], ",", 
+      RowBox[{
+       RowBox[{"phiRedExpression", "=", 
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"(", 
+              RowBox[{
+               RowBox[{"N", "*", "mC"}], "-", "S6"}], ")"}], "*", 
+             "\[Gamma]Ana", "*", 
+             RowBox[{"(", 
+              RowBox[{"\[Gamma]H", "+", 
+               RowBox[{"S3", "*", "\[Gamma]Ox"}]}], ")"}], "*", 
+             "\[CurlyPhi]Ana"}], "-", 
+            RowBox[{"S1", "*", "\[Gamma]Ox", "*", 
+             RowBox[{"(", 
+              RowBox[{"b", "+", 
+               RowBox[{
+                RowBox[{"(", 
+                 RowBox[{
+                  RowBox[{"A", "*", "mC"}], "-", "S5"}], ")"}], "*", 
+                "\[Gamma]Ana", "*", "\[CurlyPhi]Ana"}], "-", 
+               RowBox[{"\[Gamma]H", "*", 
+                RowBox[{"(", 
+                 RowBox[{
+                  RowBox[{"-", "1"}], "+", "\[CurlyPhi]Ana", "+", 
+                  "\[CurlyPhi]O"}], ")"}]}]}], ")"}]}]}], ")"}], "/", 
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{"S2", "*", 
+             RowBox[{"(", 
+              RowBox[{"\[Gamma]H", "+", 
+               RowBox[{"S3", "*", "\[Gamma]Ox"}]}], ")"}], "*", 
+             "\[Gamma]Red"}], "-", 
+            RowBox[{"S1", "*", "\[Gamma]Ox", "*", 
+             RowBox[{"(", 
+              RowBox[{"\[Gamma]H", "+", 
+               RowBox[{"S4", "*", "\[Gamma]Red"}]}], ")"}]}]}], ")"}]}], 
+         ")"}]}], ";", "\[IndentingNewLine]", 
+       RowBox[{"phiRedSubstituted", "=", 
+        RowBox[{"phiRedExpression", "/.", " ", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"\[Gamma]H", "->", "\[Gamma]HVal"}], ",", 
+           RowBox[{"\[Gamma]Ana", "->", "\[Gamma]AnaVal"}], ",", 
+           RowBox[{"\[Gamma]Red", "->", "\[Gamma]RedVal"}], ",", 
+           RowBox[{"\[Gamma]Ox", "->", "\[Gamma]OxVal"}], ",", 
+           RowBox[{"S1", "->", "S1Val"}], ",", 
+           RowBox[{"S2", "->", "S2Val"}], ",", 
+           RowBox[{"S3", "->", "S3Val"}], ",", 
+           RowBox[{"S4", "->", "S4Val"}], ",", 
+           RowBox[{"S5", "->", "S5Val"}], ",", 
+           RowBox[{"S6", "->", "S6Val"}], ",", 
+           RowBox[{"mC", "->", "mCVal"}], ",", 
+           RowBox[{"N", "->", "NVal"}], ",", 
+           RowBox[{"A", "->", "AVal"}], ",", 
+           RowBox[{"b", "->", "bVal"}], ",", 
+           RowBox[{"\[CurlyPhi]O", "->", "\[CurlyPhi]OVal"}]}], "}"}]}]}], 
+       ";", "\[IndentingNewLine]", 
+       RowBox[{"Plot", "[", 
+        RowBox[{"phiRedSubstituted", ",", 
+         RowBox[{"{", 
+          RowBox[{"\[CurlyPhi]Ana", ",", 
+           RowBox[{"-", "4"}], ",", "4"}], "}"}], ",", 
+         RowBox[{"PlotRange", "->", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"-", "1"}], ",", "1"}], "}"}]}], "}"}]}], ",", 
+         RowBox[{"AxesLabel", "->", 
+          RowBox[{"{", 
+           RowBox[{"\"\<\[CurlyPhi]Ana\>\"", ",", "\"\<\[CurlyPhi]Red\>\""}], 
+           "}"}]}]}], "]"}]}]}], "]"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"\[Gamma]HVal", ",", "0.0"}], "}"}], ",", "0", ",", "1", ",", 
+      RowBox[{"Label", "->", "\"\<\[Gamma]H\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"\[Gamma]AnaVal", ",", "0.5"}], "}"}], ",", "0", ",", "1", ",", 
+      RowBox[{"Label", "->", "\"\<\[Gamma]Ana\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"\[Gamma]RedVal", ",", "0.5"}], "}"}], ",", "0", ",", "1", ",", 
+      RowBox[{"Label", "->", "\"\<\[Gamma]Red\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"\[Gamma]OxVal", ",", "0.5"}], "}"}], ",", "0", ",", "1", ",", 
+      
+      RowBox[{"Label", "->", "\"\<\[Gamma]Ox\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"S1Val", ",", "2"}], "}"}], ",", "0", ",", "10", ",", 
+      RowBox[{"Label", "->", "\"\<S1\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"S2Val", ",", "2"}], "}"}], ",", "0", ",", "10", ",", 
+      RowBox[{"Label", "->", "\"\<S2\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"S3Val", ",", "0.3"}], "}"}], ",", 
+      RowBox[{"-", "1"}], ",", "1", ",", 
+      RowBox[{"Label", "->", "\"\<S3\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"S4Val", ",", "1"}], "}"}], ",", 
+      RowBox[{"-", "1"}], ",", "1", ",", 
+      RowBox[{"Label", "->", "\"\<S4\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"S5Val", ",", "0.3"}], "}"}], ",", "0", ",", "10", ",", 
+      RowBox[{"Label", "->", "\"\<S5\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"S6Val", ",", "0.0"}], "}"}], ",", "0", ",", "10", ",", 
+      RowBox[{"Label", "->", "\"\<S6\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"mCVal", ",", "10"}], "}"}], ",", "0", ",", "10", ",", 
+      RowBox[{"Label", "->", "\"\<mC\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"JanaVal", ",", "0.25"}], "}"}], ",", "0", ",", "10", ",", 
+      RowBox[{"Label", "->", "\"\<Jana\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"NVal", ",", 
+        RowBox[{"1", "*", 
+         RowBox[{"10", "^", 
+          RowBox[{"-", "7"}]}]}]}], "}"}], ",", "0", ",", 
+      RowBox[{"1", "*", 
+       RowBox[{"10", "^", 
+        RowBox[{"-", "6"}]}]}], ",", 
+      RowBox[{"Label", "->", "\"\<N\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"AVal", ",", 
+        RowBox[{"1", "*", 
+         RowBox[{"10", "^", 
+          RowBox[{"-", "7"}]}]}]}], "}"}], ",", "0", ",", 
+      RowBox[{"1", "*", 
+       RowBox[{"10", "^", 
+        RowBox[{"-", "6"}]}]}], ",", 
+      RowBox[{"Label", "->", "\"\<A\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"bVal", ",", "0.2"}], "}"}], ",", "0", ",", "1", ",", 
+      RowBox[{"Label", "->", "\"\<b\>\""}]}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"\[CurlyPhi]OVal", ",", "0.4"}], "}"}], ",", "0", ",", "1", 
+      ",", 
+      RowBox[{"Label", "->", "\"\<\[CurlyPhi]O\>\""}]}], "}"}]}], "]"}], "\n",
+   "\n"}]], "Input",
+ CellChangeTimes->{{3.9084077584604053`*^9, 3.9084077592037373`*^9}, {
+  3.9084079189354143`*^9, 3.908407957013279*^9}, {3.90840805748483*^9, 
+  3.908408160746819*^9}, {3.908408321595635*^9, 3.908408337456215*^9}, {
+  3.9084083900097437`*^9, 3.908408392582831*^9}, {3.9084084275024014`*^9, 
+  3.908408429815159*^9}, {3.908408476915073*^9, 3.908408485686117*^9}, {
+  3.908408648474334*^9, 3.90840865266298*^9}, {3.908408713977847*^9, 
+  3.9084087271032963`*^9}},
+ CellLabel->"In[17]:=",ExpressionUUID->"f8842d88-bad1-46e8-b97e-d25b9c626ceb"],
+
+Cell[BoxData[
+ TagBox[
+  StyleBox[
+   DynamicModuleBox[{$CellContext`AVal$$ = Rational[
+    1, 10000000], $CellContext`bVal$$ = 0.2, $CellContext`JanaVal$$ = 
+    0.25, $CellContext`mCVal$$ = 10, $CellContext`NVal$$ = Rational[
+    1, 10000000], $CellContext`S1Val$$ = 2, $CellContext`S2Val$$ = 
+    2, $CellContext`S3Val$$ = 0.3, $CellContext`S4Val$$ = 
+    1, $CellContext`S5Val$$ = 0.3, $CellContext`S6Val$$ = 
+    0., $CellContext`\[Gamma]AnaVal$$ = 0.5, $CellContext`\[Gamma]HVal$$ = 
+    0., $CellContext`\[Gamma]OxVal$$ = 0.5, $CellContext`\[Gamma]RedVal$$ = 
+    0.5, $CellContext`\[CurlyPhi]OVal$$ = 0.4, Typeset`show$$ = True, 
+    Typeset`bookmarkList$$ = {}, Typeset`bookmarkMode$$ = "Menu", 
+    Typeset`animator$$, Typeset`animvar$$ = 1, Typeset`name$$ = 
+    "\"untitled\"", Typeset`specs$$ = {{{
+       Hold[$CellContext`\[Gamma]HVal$$], 0.}, 0, 1}, {{
+       Hold[$CellContext`\[Gamma]AnaVal$$], 0.5}, 0, 1}, {{
+       Hold[$CellContext`\[Gamma]RedVal$$], 0.5}, 0, 1}, {{
+       Hold[$CellContext`\[Gamma]OxVal$$], 0.5}, 0, 1}, {{
+       Hold[$CellContext`S1Val$$], 2}, 0, 10}, {{
+       Hold[$CellContext`S2Val$$], 2}, 0, 10}, {{
+       Hold[$CellContext`S3Val$$], 0.3}, -1, 1}, {{
+       Hold[$CellContext`S4Val$$], 1}, -1, 1}, {{
+       Hold[$CellContext`S5Val$$], 0.3}, 0, 10}, {{
+       Hold[$CellContext`S6Val$$], 0.}, 0, 10}, {{
+       Hold[$CellContext`mCVal$$], 10}, 0, 10}, {{
+       Hold[$CellContext`JanaVal$$], 0.25}, 0, 10}, {{
+       Hold[$CellContext`NVal$$], 
+       Rational[1, 10000000]}, 0, 
+      Rational[1, 1000000]}, {{
+       Hold[$CellContext`AVal$$], 
+       Rational[1, 10000000]}, 0, 
+      Rational[1, 1000000]}, {{
+       Hold[$CellContext`bVal$$], 0.2}, 0, 1}, {{
+       Hold[$CellContext`\[CurlyPhi]OVal$$], 0.4}, 0, 1}}, Typeset`size$$ = {
+    450., {135., 142.}}, Typeset`update$$ = 0, Typeset`initDone$$, 
+    Typeset`skipInitDone$$ = True}, 
+    DynamicBox[Manipulate`ManipulateBoxes[
+     1, StandardForm, 
+      "Variables" :> {$CellContext`AVal$$ = 
+        Rational[1, 10000000], $CellContext`bVal$$ = 
+        0.2, $CellContext`JanaVal$$ = 0.25, $CellContext`mCVal$$ = 
+        10, $CellContext`NVal$$ = Rational[1, 10000000], $CellContext`S1Val$$ = 
+        2, $CellContext`S2Val$$ = 2, $CellContext`S3Val$$ = 
+        0.3, $CellContext`S4Val$$ = 1, $CellContext`S5Val$$ = 
+        0.3, $CellContext`S6Val$$ = 0., $CellContext`\[Gamma]AnaVal$$ = 
+        0.5, $CellContext`\[Gamma]HVal$$ = 0., $CellContext`\[Gamma]OxVal$$ = 
+        0.5, $CellContext`\[Gamma]RedVal$$ = 
+        0.5, $CellContext`\[CurlyPhi]OVal$$ = 0.4}, 
+      "ControllerVariables" :> {}, 
+      "OtherVariables" :> {
+       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
+        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
+        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
+         Typeset`skipInitDone$$}, "Body" :> 
+      Module[{$CellContext`phiRedExpression$, \
+$CellContext`phiRedSubstituted$}, $CellContext`phiRedExpression$ = ((
+             N $CellContext`mC - $CellContext`S6) $CellContext`\[Gamma]Ana \
+($CellContext`\[Gamma]H + $CellContext`S3 $CellContext`\[Gamma]Ox) \
+$CellContext`\[CurlyPhi]Ana - $CellContext`S1 $CellContext`\[Gamma]Ox \
+($CellContext`b + ($CellContext`A $CellContext`mC - $CellContext`S5) \
+$CellContext`\[Gamma]Ana $CellContext`\[CurlyPhi]Ana - $CellContext`\[Gamma]H \
+(-1 + $CellContext`\[CurlyPhi]Ana + \
+$CellContext`\[CurlyPhi]O)))/($CellContext`S2 ($CellContext`\[Gamma]H + \
+$CellContext`S3 $CellContext`\[Gamma]Ox) $CellContext`\[Gamma]Red - \
+$CellContext`S1 $CellContext`\[Gamma]Ox ($CellContext`\[Gamma]H + \
+$CellContext`S4 $CellContext`\[Gamma]Red)); $CellContext`phiRedSubstituted$ = 
+         ReplaceAll[$CellContext`phiRedExpression$, {$CellContext`\[Gamma]H -> \
+$CellContext`\[Gamma]HVal$$, $CellContext`\[Gamma]Ana -> \
+$CellContext`\[Gamma]AnaVal$$, $CellContext`\[Gamma]Red -> $CellContext`\
+\[Gamma]RedVal$$, $CellContext`\[Gamma]Ox -> $CellContext`\[Gamma]OxVal$$, \
+$CellContext`S1 -> $CellContext`S1Val$$, $CellContext`S2 -> \
+$CellContext`S2Val$$, $CellContext`S3 -> $CellContext`S3Val$$, \
+$CellContext`S4 -> $CellContext`S4Val$$, $CellContext`S5 -> \
+$CellContext`S5Val$$, $CellContext`S6 -> $CellContext`S6Val$$, \
+$CellContext`mC -> $CellContext`mCVal$$, 
+            N -> $CellContext`NVal$$, $CellContext`A -> $CellContext`AVal$$, \
+$CellContext`b -> $CellContext`bVal$$, $CellContext`\[CurlyPhi]O -> \
+$CellContext`\[CurlyPhi]OVal$$}]; 
+        Plot[$CellContext`phiRedSubstituted$, {$CellContext`\[CurlyPhi]Ana, \
+-4, 4}, PlotRange -> {{-1, 1}, {-1, 1}}, 
+          AxesLabel -> {"\[CurlyPhi]Ana", "\[CurlyPhi]Red"}]], 
+      "Specifications" :> {{{$CellContext`\[Gamma]HVal$$, 0.}, 0, 1, Label -> 
+         "\[Gamma]H"}, {{$CellContext`\[Gamma]AnaVal$$, 0.5}, 0, 1, Label -> 
+         "\[Gamma]Ana"}, {{$CellContext`\[Gamma]RedVal$$, 0.5}, 0, 1, Label -> 
+         "\[Gamma]Red"}, {{$CellContext`\[Gamma]OxVal$$, 0.5}, 0, 1, Label -> 
+         "\[Gamma]Ox"}, {{$CellContext`S1Val$$, 2}, 0, 10, Label -> 
+         "S1"}, {{$CellContext`S2Val$$, 2}, 0, 10, Label -> 
+         "S2"}, {{$CellContext`S3Val$$, 0.3}, -1, 1, Label -> 
+         "S3"}, {{$CellContext`S4Val$$, 1}, -1, 1, Label -> 
+         "S4"}, {{$CellContext`S5Val$$, 0.3}, 0, 10, Label -> 
+         "S5"}, {{$CellContext`S6Val$$, 0.}, 0, 10, Label -> 
+         "S6"}, {{$CellContext`mCVal$$, 10}, 0, 10, Label -> 
+         "mC"}, {{$CellContext`JanaVal$$, 0.25}, 0, 10, Label -> 
+         "Jana"}, {{$CellContext`NVal$$, 
+          Rational[1, 10000000]}, 0, 
+         Rational[1, 1000000], Label -> "N"}, {{$CellContext`AVal$$, 
+          Rational[1, 10000000]}, 0, 
+         Rational[1, 1000000], Label -> "A"}, {{$CellContext`bVal$$, 0.2}, 0, 
+         1, Label -> "b"}, {{$CellContext`\[CurlyPhi]OVal$$, 0.4}, 0, 1, 
+         Label -> "\[CurlyPhi]O"}}, "Options" :> {}, "DefaultOptions" :> {}],
+     ImageSizeCache->{823., {297., 304.}},
+     SingleEvaluation->True],
+    Deinitialization:>None,
+    DynamicModuleValues:>{},
+    SynchronousInitialization->True,
+    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
+    UnsavedVariables:>{Typeset`initDone$$},
+    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
+   Deployed->True,
+   StripOnInput->False],
+  Manipulate`InterpretManipulate[1]]], "Output",
+ CellChangeTimes->{{3.9084079416468973`*^9, 3.908407957384843*^9}, {
+   3.908408121294088*^9, 3.9084081615210114`*^9}, {3.908408324272032*^9, 
+   3.9084083377314873`*^9}, {3.908408401524547*^9, 3.908408430778924*^9}, 
+   3.9084084862897243`*^9, 3.9084086531757183`*^9, {3.9084087148328447`*^9, 
+   3.908408727425437*^9}},
+ CellLabel->"Out[17]=",ExpressionUUID->"003aeae2-eb2e-497e-9a61-788a696f710b"]
 }, Open  ]]
 },
-WindowSize->{2560, 1387},
-WindowMargins->{{0, Automatic}, {Automatic, -540}},
+WindowSize->{1440, 847},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
 CellContext->Notebook,
 FrontEndVersion->"13.2 for Mac OS X ARM (64-bit) (January 30, 2023)",
 StyleDefinitions->"Default.nb",
@@ -1392,7 +1721,7 @@ Cell[28931, 706, 450, 8, 42, "Output",ExpressionUUID->"94c8ab8d-9fd5-4109-a4da-5
 Cell[29396, 717, 2727, 69, 159, "Text",ExpressionUUID->"68a80f8a-ef61-4105-93f0-23cd43710de9"],
 Cell[CellGroupData[{
 Cell[32148, 790, 8438, 143, 194, "Input",ExpressionUUID->"ab13ea7b-3442-4b13-b463-cd33be770081"],
-Cell[40589, 935, 7603, 215, 113, "Output",ExpressionUUID->"7a6c34ac-5db5-400f-87e0-ce562740dddf"]
+Cell[40589, 935, 7603, 215, 100, "Output",ExpressionUUID->"7a6c34ac-5db5-400f-87e0-ce562740dddf"]
 }, Open  ]],
 Cell[48207, 1153, 193, 4, 44, "Text",ExpressionUUID->"b9144a98-0533-4eb1-b4e6-466fecde5a2b"],
 Cell[48403, 1159, 152, 3, 37, "Input",ExpressionUUID->"ebcbc913-2019-45e1-afdb-6d624d9b920f"],
@@ -1401,6 +1730,10 @@ Cell[CellGroupData[{
 Cell[49182, 1184, 2579, 78, 194, "Input",ExpressionUUID->"6adac5ff-5a61-4a93-9828-a5082c9edd72"],
 Cell[51764, 1264, 1608, 53, 62, "Output",ExpressionUUID->"8be3da94-83ee-4afe-8673-25936930a40a"],
 Cell[53375, 1319, 1223, 39, 63, "Output",ExpressionUUID->"e4a173ff-d378-4064-beab-863a23326ca3"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[54635, 1363, 7804, 205, 636, "Input",ExpressionUUID->"f8842d88-bad1-46e8-b97e-d25b9c626ceb"],
+Cell[62442, 1570, 6751, 117, 624, "Output",ExpressionUUID->"003aeae2-eb2e-497e-9a61-788a696f710b"]
 }, Open  ]]
 }
 ]
