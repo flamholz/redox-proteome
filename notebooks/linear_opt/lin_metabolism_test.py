@@ -1,11 +1,17 @@
 import unittest
 import numpy as np
+import sys
 
-from linear_opt.lin_metabolism import GrowthRateOptParams, RateLawFunctor
-from linear_opt.lin_metabolism import LinearMetabolicModel
-from linear_opt.lin_metabolism import SingleSubstrateMMRateLaw
-from linear_opt.lin_metabolism import MultiSubstrateMMRateLaw
-from linear_opt.lin_metabolism import MW_C_ATOM
+# Make it possible to import modules from this directory
+from pathlib import Path
+dir_path = Path(__file__).parent
+sys.path.append(str(dir_path))
+
+from lin_metabolism import GrowthRateOptParams, RateLawFunctor
+from lin_metabolism import LinearMetabolicModel
+from lin_metabolism import SingleSubstrateMMRateLaw
+from lin_metabolism import MultiSubstrateMMRateLaw
+from lin_metabolism import MW_C_ATOM
 
 from os import path
 
@@ -15,6 +21,10 @@ DEFAULT_ATP = 1.4e-6
 DEFAULT_NADH = 1.2e-7
 DEFAULT_RE = 10
 DEFAULT_RA = 0.3
+
+# Relative path to model files.
+PATH2MODELS = path.join(str(dir_path), 
+                        '../../models/linear/')
 
 
 class FakeRateLaw(RateLawFunctor):
@@ -35,6 +45,16 @@ class GrowthRateOptParamsTest(unittest.TestCase):
         self.assertEqual(opt.fixed_ADP, 1)
         self.assertEqual(opt.fixed_NAD, 1)
         self.assertEqual(opt.fixed_C_red, 1)
+        self.assertEqual(opt.fixed_ra, 1)
+        self.assertEqual(opt.fixed_re, 1)
+        self.assertEqual(opt.do_dilution, False)
+        self.assertEqual(opt.min_phi_O, 0)
+
+        self.assertIsNone(opt.max_lambda_hr)
+        self.assertIsNone(opt.max_C_uptake)
+        self.assertIsNone(opt.max_phi_H)
+        self.assertIsNone(opt.phi_O)
+        self.assertIsNone(opt.phi_red)
         
     def testMaintenance(self):
         opt = GrowthRateOptParams(maintenance_cost=1)
@@ -65,9 +85,8 @@ class BasicModelTest(unittest.TestCase):
 
     def setUp(self):
         # Loading the model of respiration just to exercise the code. 
-        model_dir = '../models/linear/respiration/'
-        m_fname = path.join(model_dir, 'glucose_resp_molecular_props.csv')
-        S_fname = path.join(model_dir, 'glucose_resp_stoich_matrix.csv')
+        m_fname = path.join(PATH2MODELS, 'respiration/glucose_resp_molecular_props.csv')
+        S_fname = path.join(PATH2MODELS, 'respiration/glucose_resp_stoich_matrix.csv')
         self.model = LinearMetabolicModel.FromFiles(m_fname, S_fname)
 
         # These are the values in the default model file above (for now)
@@ -207,16 +226,24 @@ class AutoModelTest(unittest.TestCase):
 
     def setUp(self):
         # Loading the model of respiration just to exercise the code. 
-        model_dir = '../models/linear/autotrophy/'
-        m_fname = path.join(model_dir, 'glucose_auto_molecular_props.csv')
-        S_fname = path.join(model_dir, 'glucose_auto_stoich_matrix.csv')
-        self.model = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+        m_fname = path.join(PATH2MODELS, 'autotrophy/glucose_auto_molecular_props.csv')
+        S_fname = path.join(PATH2MODELS, 'autotrophy/glucose_auto_stoich_matrix.csv')
+        self.model = LinearMetabolicModel.FromFiles(m_fname, S_fname,
+                                                    heterotroph=False)
     
+    def testCopy(self):
+        model_copy = self.model.copy()
+        self.assertEqual(self.model.ZCorg, model_copy.ZCorg)
+        self.assertEqual(self.model.ZCprod, model_copy.ZCprod)
+        self.assertEqual(self.model.ZCB, model_copy.ZCB)
+        self.assertEqual(self.model.ZCorg, model_copy.ZCorg)
+        self.assertEqual(self.model.heterotroph, model_copy.heterotroph)
+
     def testSetZCorg(self):
         for v in np.arange(-3, 3):
             zcb = self.model.ZCB
             expected_S6 = (zcb - v)/2
-            self.model.set_ZCorg(v, heterotroph=False)
+            self.model.set_ZCorg(v)
             self.assertEqual(self.model.get_S6(), expected_S6)
             self.assertEqual(self.model.ZCorg, v)
 

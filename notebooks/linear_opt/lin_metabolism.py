@@ -184,6 +184,7 @@ class GrowthRateOptParams(object):
                 These are typically reported units for convenience.
         ATP_maint: float, maintenance in units of [mol ATP/gCDW/s].
         max_lambda_hr: float, maximum lambda value. Units of [1/hr].
+        max_C_uptake: float, maximum C uptake rate. Units of [mol C/gCDW/s].
         fixed_ATP: float, fixed ATP concentration. [mol/gCDW] units.
         fixed_NADH: float, fixed NADH concentration. [mol/gCDW] units.
         fixed_re: float, fixed ratio of NAD/NADH concentrations.
@@ -195,7 +196,7 @@ class GrowthRateOptParams(object):
     def __init__(self, do_dilution=False, rate_law=None,
                  min_phi_O=None, phi_O=None,
                  phi_red=None, max_phi_H=None,
-                 maintenance_cost=0, max_lambda_hr=None,
+                 maintenance_cost=0, max_lambda_hr=None, max_C_uptake=None,
                  fixed_ATP=None, fixed_NADH=None,
                  fixed_ra=None, fixed_re=None, fixed_C_red=None):
         """Initializes the GrowthRateOptParams class.
@@ -235,6 +236,7 @@ class GrowthRateOptParams(object):
         self.phi_red = phi_red
         self.max_phi_H = max_phi_H
         self.max_lambda_hr = max_lambda_hr
+        self.max_C_uptake = max_C_uptake
 
         # default concentrations are 1 so that
         # nothing changes if not specified.
@@ -266,6 +268,7 @@ class GrowthRateOptParams(object):
             'opt.maintenance_cost_mmol_gDW_hr': self.maintenance_cost,
             'opt.ATP_maint_mol_gCDW_s': self.ATP_maint,
             'opt.max_lambda_hr': self.max_lambda_hr,
+            'opt.max_C_uptake': self.max_C_uptake,
             'opt.fixed_ATP_mol_gCDW': self.fixed_ATP,
             'opt.fixed_NADH_mol_gCDW': self.fixed_NADH,
             'opt.fixed_NAD_mol_gCDW': self.fixed_NAD,
@@ -286,6 +289,7 @@ class GrowthRateOptParams(object):
             max_phi_H=self.max_phi_H,
             maintenance_cost=self.maintenance_cost,
             max_lambda_hr=self.max_lambda_hr,
+            max_C_uptake=self.max_C_uptake,
             fixed_ATP=self.fixed_ATP,
             fixed_NADH=self.fixed_NADH,
             fixed_ra=self.fixed_ra,
@@ -296,7 +300,7 @@ class LinearMetabolicModel(object):
     """Coarse-grained linear model of resource allocation while balancing ATP and e- fluxes."""
 
     @classmethod
-    def FromFiles(cls, metabolites_fname, stoich_fname):
+    def FromFiles(cls, metabolites_fname, stoich_fname, heterotroph=True):
         m_df = pd.read_csv(metabolites_fname, index_col=0)
         
         S_df = pd.read_csv(stoich_fname, index_col=0)
@@ -311,11 +315,15 @@ class LinearMetabolicModel(object):
             dtype_dict[k] = dt
             
         # Return an instance
-        return cls(m_df, S_df.astype(dtype_dict))
+        return cls(m_df, S_df.astype(dtype_dict), heterotroph=heterotroph)
     
-    def __init__(self, metabolites_df, S_df):
+    def __init__(self, metabolites_df, S_df, heterotroph=True):
         self.m_df = metabolites_df
         self.S_df = S_df
+
+        # boolean -- true if heterotroph, false if autotroph
+        # indicates that Cred comes from outside the cell if true.
+        self.heterotroph = heterotroph
         
         # Record the ZC values
         self.ZCorg = self.m_df.loc['C_red'].NOSC
@@ -329,7 +337,8 @@ class LinearMetabolicModel(object):
         self._check_e_balance()
 
     def copy(self):
-        return LinearMetabolicModel(self.m_df.copy(), self.S_df.copy())
+        return LinearMetabolicModel(self.m_df.copy(), self.S_df.copy(),
+                                    self.heterotroph)
 
     def print_model(self):
         print("Metabolites:")
@@ -383,15 +392,13 @@ class LinearMetabolicModel(object):
         new_ZCB = (self.ZCorg + 2*new_S6)
         self.set_ZCB(new_ZCB)
 
-    def set_ZCorg(self, new_ZCorg, heterotroph=True):
+    def set_ZCorg(self, new_ZCorg):
         """Sets the Z_C,org value and updates stoichiometries accordingly.
         
         Assumes ZCB is fixed, recalculates S1/S2 and S6 accordingly.
 
         Args:
             new_ZCorg: float new Z_C,org value
-            heterotroph: boolean, whether considering a 
-                heterotroph or autotroph.
         """
         new_SX = (self.ZCprod - new_ZCorg)/2
         new_S6 = (self.ZCB - new_ZCorg)/2
@@ -406,7 +413,7 @@ class LinearMetabolicModel(object):
         self.S_df.at['anabolism','EC'] = -new_S6
         self.S_df.at['anabolism','ECH'] = new_S6
 
-        if heterotroph:
+        if self.heterotroph:
             self.S_df.at['oxidation','EC'] = -new_SX
             self.S_df.at['oxidation','ECH'] = new_SX
         else:
@@ -505,9 +512,7 @@ class LinearMetabolicModel(object):
         TODO: make the output problem DCP-compliant.
             https://www.cvxpy.org/tutorial/dcp/index.html#dcp
         TODO: what should kcat be? currently 50 /s for all processes. 
-        TODO: dilution for ADP and NAD? seems like I should. 
-        TODO: what do concentrations need to be in zero-order with dilution
-            to get a realistic growth rate?
+        TODO: dilution for ADP and NAD? seems like I should.
 
         Args:
             gr_opt_params: a GrowthRateOptimizationParams object.
@@ -575,7 +580,8 @@ class LinearMetabolicModel(object):
         # J_ana has units of [number C/g/s], so we multiply by the mass of a C atom
         # and the ratio of grams cell per gram C. Finally we convert /s to /hr.
         # If we assume the biomass C fraction is fixed, this exactly equals the growth rate
-        ana_idx = self.S_df.index.get_loc('anabolism')   
+        ana_idx = self.S_df.index.get_loc('anabolism')
+        ox_index = self.S_df.index.get_loc('oxidation')
         growth_rate_s = Js[ana_idx]*MW_C_ATOM
         growth_rate_hr = growth_rate_s*S_PER_HR
         obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
@@ -597,10 +603,16 @@ class LinearMetabolicModel(object):
         internal_metab_flux_balance = cp.multiply(metab_flux_balance, internal_mets)
         constraints.append(internal_metab_flux_balance == 0)
         
-        if params.max_lambda_hr:
+        if params.max_lambda_hr is not None:
             lambda_hr_ub = cp.Parameter(name='max_lambda_hr', nonneg=True,
                                         value=params.max_lambda_hr)
             constraints.append(growth_rate_hr <= lambda_hr_ub)
+        if params.max_C_uptake is not None:
+            assert self.heterotroph, "Can only set max C uptake for heterotrophs."
+            C_uptake_ub = cp.Parameter(name='max_C_uptake', nonneg=True,
+                                       value=params.max_C_uptake)
+            C_uptake_flux = Js[ana_idx] + Js[ox_index]
+            constraints.append(C_uptake_flux <= C_uptake_ub)
         if params.max_phi_H is not None:
             h_index = self.S_df.index.get_loc('ATP_homeostasis')
             constraints.append(phis[h_index] <= params.max_phi_H)
@@ -806,5 +818,14 @@ class LinearMetabolicModel(object):
         d['S6_ub_zo'] = S6_ub
         d['ZCorg_lb_zo'] = ZCorg_lb
         d['ZCorg_ub_zo'] = ZCorg_ub
+
+        # Calculate carbon use efficiency, CUE
+        # Since Jana and Jox are written per C, can just divide.
+        Jana = d['anabolism_flux']
+        Jox = d['oxidation_flux']
+        Jsum = Jana + Jox
+        d['CUE'] = np.NaN
+        if Jsum > 0:
+            d['CUE'] = Jana / Jsum
         return d
             
