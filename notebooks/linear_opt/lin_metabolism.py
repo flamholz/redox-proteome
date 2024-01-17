@@ -512,7 +512,7 @@ class LinearMetabolicModel(object):
         TODO: make the output problem DCP-compliant.
             https://www.cvxpy.org/tutorial/dcp/index.html#dcp
         TODO: what should kcat be? currently 50 /s for all processes. 
-        TODO: dilution for ADP and NAD? seems like I should.
+        TODO: dilution for ADP and NAD? this is done in the numerical sims.
 
         Args:
             gr_opt_params: a GrowthRateOptimizationParams object.
@@ -570,7 +570,6 @@ class LinearMetabolicModel(object):
             name='concs', shape=n_met, nonneg=True, value=c_vals)
 
         # Calculate fluxes using on the rate law functor.
-        # TODO: pass in the stoichioemtric matrix and metabolite names. 
         Js = params.rate_law.Apply(
             self.S, self.processes, self.metabolites,
             gammas, phis, concs)
@@ -611,7 +610,10 @@ class LinearMetabolicModel(object):
             assert self.heterotroph, "Can only set max C uptake for heterotrophs."
             C_uptake_ub = cp.Parameter(name='max_C_uptake', nonneg=True,
                                        value=params.max_C_uptake)
-            C_uptake_flux = Js[ana_idx] + Js[ox_index]
+            # Final term on RHS is the dilution of Cred by growth.
+            # If we are not handling dilution, then set [Cred] = 0.
+            my_Cred_conc = concs[C_red_index] if params.do_dilution else 0
+            C_uptake_flux = Js[ana_idx] + Js[ox_index] + my_Cred_conc*growth_rate_s
             constraints.append(C_uptake_flux <= C_uptake_ub)
         if params.max_phi_H is not None:
             h_index = self.S_df.index.get_loc('ATP_homeostasis')
@@ -794,6 +796,12 @@ class LinearMetabolicModel(object):
             soln_dict[pname + '_gamma'] = my_g
             soln_dict[pname + '_phi'] = my_phi
             soln_dict[pname + '_flux'] = my_j
+
+        # Save the C uptake flux for heterotrophs. Always zero for autotrophs here.
+        C_uptake_flux = 0
+        if self.heterotroph:
+            C_uptake_flux = soln_dict['oxidation_flux'] + soln_dict['anabolism_flux']
+        soln_dict['C_uptake_flux'] = C_uptake_flux
 
         return soln_dict
     

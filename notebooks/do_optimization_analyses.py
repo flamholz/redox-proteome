@@ -31,7 +31,7 @@ S_fname = path.join(model_dir, 'glucose_resp_stoich_matrix.csv')
 lam = LinearMetabolicModel.FromFiles(m_fname, S_fname)
 
 print('Optimizing over a range of fixed lambda values...')
-# Here is a model that has no homeostasis (phi_H <= 0),
+# Here is a model that has no homeostasis (phi_H = 0),
 # no maintenance (ATP_maint = 0), but can alter biomass
 # composition through phi_O. We set a maximum lambda
 # so that we can run the model over a range of lambda values.
@@ -42,8 +42,10 @@ for lam_val in lambdas:
     # Make fresh parameters with a new max_lambda_hr
     params = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True, 
                                  max_lambda_hr=lam_val, max_phi_H=0,
+                                 maintenance_cost=0,
                                  fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
                                  fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    
     # Optimize the growth rate given the parameters
     opt, opt_prob = lam.maximize_growth_rate(params)
     d = lam.results_as_dict(opt_prob, params)
@@ -54,25 +56,54 @@ phi_df['expected_Jana'] = phi_df['anabolism_gamma']*phi_df['anabolism_phi']
 phi_df['expected_lambda'] = MW_C_ATOM*3600*phi_df['expected_Jana']
 phi_df.to_csv('../output/Fig2A_variable_lambda.csv', index=False)
 
+### Same as above, but with non-zero maintenance
+lambdas = np.arange(0.1, 4, 0.01)
+maint = 10 
+results = []
+
+for lam_val in lambdas:
+    # Make fresh parameters with a new max_lambda_hr
+    params = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True, 
+                                 max_lambda_hr=lam_val, max_phi_H=0,
+                                 maintenance_cost=maint,
+                                 fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                 fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+    
+    # Optimize the growth rate given the parameters
+    opt, opt_prob = lam.maximize_growth_rate(params)
+    d = lam.results_as_dict(opt_prob, params)
+    results.append(d)
+
+phi_df = pd.DataFrame(results)
+phi_df['expected_Jana'] = phi_df['anabolism_gamma']*phi_df['anabolism_phi']
+phi_df['expected_lambda'] = MW_C_ATOM*3600*phi_df['expected_Jana']
+phi_df.to_csv('../output/Fig2A_variable_lambda_maint.csv', index=False)
+
+
 print('Optimizing over a range of fixed phi_red values...')
 phi_reds = np.linspace(1e-3, 1e-1, 100)
+# Default S4 = 1.0 -- put at midpoint of sweep
+S4vals = np.arange(0.5, 1.51, 0.25)
 results = []
 
 for phi_r in phi_reds:
-    # Make fresh parameters with a new max_lambda_hr
-    params = GrowthRateOptParams(min_phi_O=0.4, 
-                                 do_dilution=True, 
-                                 phi_red=phi_r,
-                                 fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
-                                 fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
-    # Optimize the growth rate given the parameters
-    opt, opt_prob = lam.maximize_growth_rate(params)
-    if opt_prob.status != 'optimal':
-        print('Warning: optimization not optimal for phi_red = ', phi_r)
-        continue
+    for s4 in S4vals:
+        my_lam = lam.copy()
+        my_lam.set_ATP_yield('reduction', s4)
+        # Make fresh params
+        params = GrowthRateOptParams(min_phi_O=0.4, 
+                                    do_dilution=True, 
+                                    phi_red=phi_r,
+                                    fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                    fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+        # Optimize the growth rate given the parameters
+        opt, opt_prob = my_lam.maximize_growth_rate(params)
+        if opt_prob.status != 'optimal':
+            print('Warning: optimization not optimal for phi_red = ', phi_r)
+            continue
 
-    d = lam.results_as_dict(opt_prob, params)
-    results.append(d)
+        d = my_lam.results_as_dict(opt_prob, params)
+        results.append(d)
 
 phi_df = pd.DataFrame(results)
 phi_df.to_csv('../output/Fig2S1_variable_phi_red.csv', index=False)
@@ -142,7 +173,7 @@ print('Sweeping pairs of (Z_C,red, S4) values...')
 ZCorgs = np.arange(-3, 3.01, 0.05)
 
 # Default S4 = 1.0 -- put at midpoint of sweep
-S4vals = np.arange(0.5, 1.51, 0.25)
+S4vals = np.arange(0.5, 1.51, 0.05)
 
 results = []
 lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
@@ -153,7 +184,6 @@ for S4 in S4vals:
         ref_lam = lmm.copy()
         ref_lam.set_ZCorg(z)
         ref_lam.set_ATP_yield('reduction', S4)
-        # Note we are fixing phi_O here to highlight the contribution of phi_H
         params = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True,
                                      fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
                                      fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
@@ -170,7 +200,7 @@ for S4 in S4vals:
         results.append(d)
 
 zcorg_sensitivity_var_s4 = pd.DataFrame(results)
-zcorg_sensitivity_var_s4.to_csv('../output/Fig3A_variable_ZCorg_var_S4.csv', index=False)
+zcorg_sensitivity_var_s4.to_csv('../output/Fig2_variable_ZCorg_var_S4.csv', index=False)
 
 print('Sweeping pairs of (Z_C,red, S3) values...')
 ZCorgs = np.arange(-3, 3.01, 0.05)
@@ -241,6 +271,42 @@ for zcb in ZCBs:
 zcorg_sensitivity_var_zcb = pd.DataFrame(results)
 zcorg_sensitivity_var_zcb.to_csv('../output/Fig3C_variable_ZCorg_var_ZCB.csv', index=False)
 
+# Repeat the above, but with a maximum C uptake rate
+print('Sweeping pairs of (Z_C,red, Z_C,B) values with a maximum C uptake rate...')
+
+results = []
+lmm = LinearMetabolicModel.FromFiles(m_fname, S_fname)
+
+# Test maximum C uptake fluxes ranging from 10-90% of the 
+# unconstrained maximum from the above sweep
+max_C_uptake_fluxes = np.arange(0.1, 0.91, 0.4)*6e-05
+
+for max_C_uptake_flux in max_C_uptake_fluxes:
+    for zcb in ZCBs:
+        for zcorg in ZCorgs:
+            # Test with and without ATP homeostasis -- first with
+            ref_lam = lmm.copy()
+            ref_lam.set_ZCorg(zcorg)
+            ref_lam.set_ZCB(zcb)
+            params = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True,
+                                         max_C_uptake=max_C_uptake_flux,
+                                         fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                         fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+            m, opt_p = ref_lam.maximize_growth_rate(params)
+            d = ref_lam.results_as_dict(opt_p, params)
+            results.append(d)
+
+            # Now seting max_phi_H = 0, i.e. no ATP homeostasis
+            params_nh = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True,
+                                            max_C_uptake=max_C_uptake_flux, max_phi_H=0,
+                                            fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
+                                            fixed_re=DEFAULT_RE, fixed_ra=DEFAULT_RA)
+            m, opt_p = ref_lam.maximize_growth_rate(params_nh)
+            d = ref_lam.results_as_dict(opt_p, params_nh)
+            results.append(d)
+
+zcorg_sensitivity_var_zcb = pd.DataFrame(results)
+zcorg_sensitivity_var_zcb.to_csv('../output/Fig3C_variable_ZCorg_var_ZCB_max_C_uptake.csv', index=False)
 
 print('Loading autotrophy model...')
 auto_model_dir = '../models/linear/autotrophy/'
@@ -249,10 +315,10 @@ auto_S_fname = path.join(auto_model_dir, 'glucose_auto_stoich_matrix.csv')
 
 # Load models of auto and heterotrophy for comparison
 lam = LinearMetabolicModel.FromFiles(m_fname, S_fname)
-auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
+auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname, heterotroph=False)
 
 # A model of autotrophy where we don't enforce Cred homeostasis at all
-auto_lam_ext_C = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
+auto_lam_ext_C = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname, heterotroph=False)
 auto_lam_ext_C.m_df.loc['C_red', 'internal'] = 0
 
 print('Comparing autotrophy and heterotrophy with sampled gamma values...')
@@ -322,12 +388,12 @@ print('Optimizing the autotrophy model over a range of ZCred values...')
 ZCreds = np.arange(-2, 2.01, 0.05)
 
 # Load models of auto and heterotrophy for comparison
-auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname)
+auto_lam = LinearMetabolicModel.FromFiles(auto_m_fname, auto_S_fname, heterotroph=False)
 
 results = []
 for zcorg in ZCreds:
     my_lam = auto_lam.copy()
-    my_lam.set_ZCorg(zcorg, heterotroph=False)
+    my_lam.set_ZCorg(zcorg)
     # Make fresh parameters with a new max_lambda_hr
     params = GrowthRateOptParams(min_phi_O=0.4, do_dilution=True, 
                                  fixed_ATP=DEFAULT_ATP, fixed_NADH=DEFAULT_NADH,
