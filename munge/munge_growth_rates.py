@@ -1,12 +1,25 @@
+import sys
 import numpy as np
 import pandas as pd 
-import viz
+
+# Make it possible to import modules from this directory
+from pathlib import Path
+from os import path
+dir_path = Path(__file__).parent
+parent_dir = path.dirname(path.abspath(dir_path))
+sys.path.append(str(parent_dir))
+
+from notebooks import viz
+
+"""
+Process the manually curated list of fast-growing organisms for plotting.
+"""
 
 colors = viz.plotting_style()
 lin_colors = colors.values()
 
 # Manually curated collection of fast growers
-fast_growers_df = pd.read_csv('../data/physiology/fastest_growers.csv')
+fast_growers_df = pd.read_csv('data/physiology/fastest_growers.csv')
 # Filter out the ones we don't want to plot, aggregate remainder by species and DOI
 agg_dict = {
     'group': 'first',
@@ -35,4 +48,4 @@ fast_growers_df['marker'] = fast_growers_df.short_name.map(
     {'C. ohadii': 'o', 'V. natrigens': '^', 'S. elongatus PCC 11801': '>', 'T. crunogena': '<',
      'E. coli': 'h', 'C. perfingens': 'd', 'C. necator': '*'})
 
-fast_growers_df.to_csv('../data/physiology/fastest_growers_4plotting.csv', index=False)
+fast_growers_df.to_csv('data/physiology/fastest_growers_4plotting.csv', index=False)

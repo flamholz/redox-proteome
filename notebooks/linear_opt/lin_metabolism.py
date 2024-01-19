@@ -736,7 +736,7 @@ class LinearMetabolicModel(object):
         num -= S1*g_ox*S34_term*phi_term
         denom = ((S5/mC) - A - (S3*g_ox)/(mC*g_ana))*S12_term
         denom -= ((S6/mC) - N - (S1*g_ox)/(mC*g_ana))*S34_term
-        lam_max = -3600*num/denom
+        lam_max = -3600*num/denom        
 
         return lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub
 
