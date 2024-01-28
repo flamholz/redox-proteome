@@ -1,17 +1,3 @@
-condition,lipid_NOSC,growth_rate_hr,temp_C,experiment
-10_C,-1.6614534580391118,,10,temp
-10_C_rich,-1.6605311766783093,,10,temp_rich
-15_C,-1.6649180845818539,,15,temp
-20_C,-1.6701114036684408,,20,temp
-20_C_rich,-1.6659850991555514,,20,temp_rich
-25_C,-1.6750134039855353,,25,temp
-25_C_rich,-1.6648242777522548,,25,temp_rich
-30_C,-1.6733695290542072,,30,temp
-35_C,-1.6749319033086927,,35,temp
-35_C_rich,-1.6750798369582656,,35,temp_rich
-40_C,-1.6838082984619482,,40,temp
-43_C,-1.6982820947259223,,43,temp
-glucose_CAA,-1.6699974765827832,0.64,25,growth_rate
-glucose_MM,-1.6701246277129433,0.48,25,growth_rate
-glucose_yeast_extract,-1.6653595856833552,0.88,25,growth_rate
-succinate_MM,-1.6649021417888972,0.35,25,growth_rate
+version https://git-lfs.github.com/spec/v1
+oid sha256:cb546c0ccc255fd48790b37f81ef26b399eb44153d286138773e87fd7aea9b88
+size 806
