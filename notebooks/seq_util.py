@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from os import path
 from Bio import SeqIO
 from Bio.SeqUtils import molecular_weight
 
@@ -11,6 +12,7 @@ __author__ = 'Avi Flamholz'
 This module contains functions for calculating chemical properties of protein sequences.
 """
 
+cwd = path.dirname(__file__)
 
 _DEFAULT_AA_DF = pd.read_csv('../data/aa_nosc.csv').set_index('letter_code')
 
