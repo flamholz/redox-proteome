@@ -2,6 +2,14 @@
 
 Though the term "proteome" is sometimes used to refer to the set of coding sequences in a genome, e.g. as in "[reference proteome](https://www.uniprot.org/help/reference_proteome)," here proteome will refer to the relative or absolute levels of expressed proteins. 
 
+## Directories
+
+* data/ contains source and derived data in a directory hierarchy
+* munge/ contains scripts that pre-process data for analysis and plotting
+* notebooks/ contains scripts and notebooks that perform analysis
+* mathematica/ contains Mathematica notebooks
+* models/ contains files that define models used in code 
+
 ## Reference coding sequences
 
 Reference coding sequences live in `data/genomes/` and were drawn from UniProt entries for *E. coli* (UP000000625_83333.xml), yeast (UP000002311_559292) and cyanobacteria (UP000001425_1111708) proteins. Full documentation of the reference sequences used is give in `data/genomes/reference_proteomes.csv`.The iPython notebook `notebooks/00_PreprocessCodingSequences.ipynb` extracts these coding sequences and related metadata from UniProt XML files and calculates $Z_C$ values for each coding sequence. 
