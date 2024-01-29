@@ -110,18 +110,22 @@ nosc_corr_controlled_df.to_excel(writer, sheet_name='bac120 partial correlations
 writer.close()
 
 # Load the growth conditions and proteome ZC
+# Omitting the raw proteomic and genomic tables for now due to size limits.
 print('Making Table S2... proteome Z_C')
 desc_dict = {
-    'Sheet': ['Coding sequence Z_C', 
-              'E. coli conditions', 
+    'Sheet': ['E. coli conditions', 
               'S. cerevisiae conditions', 
-              'Syn. PCC 6803 conditions', 
-              'All protein measurements'],
-    'Description': ['Z_C values for all coding sequences in all genomes considered.',
-                    'Expression-weighted proteome Z_C values for E. coli K-12 MG1655 under different growth conditions.',
-                    'Expression-weighted proteome Z_C values for S. cerevisiae S288C under different growth conditions.',
-                    'Expression-weighted proteome Z_C values for Syn. PCC 6803 under different growth conditions.',
-                    'Protein-level measurements for all organisms and conditions.']
+              'Syn. PCC 6803 conditions',
+              #'Coding sequence Z_C', 
+              #'All protein measurements'
+              ],
+    'Description': [
+        'Expression-weighted proteome Z_C values for E. coli K-12 MG1655 under different growth conditions.',
+        'Expression-weighted proteome Z_C values for S. cerevisiae S288C under different growth conditions.',
+        'Expression-weighted proteome Z_C values for Syn. PCC 6803 under different growth conditions.',
+        #'Z_C values for all coding sequences in all genomes considered.',
+        #'Protein-level measurements for all organisms and conditions.'
+        ]
 }
 desc_df = pd.DataFrame(desc_dict)
 
@@ -169,10 +173,10 @@ all_expression_data.growth_rate_hr = all_expression_data.growth_rate_hr.round(4)
 writer = pd.ExcelWriter('si_tables/SuppTable5_Proteomes.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
-coding_seq_zc.to_excel(writer, sheet_name='Coding sequence Z_C', index=False)
 coli_data.to_excel(writer, sheet_name='E. coli conditions', index=False)
 yeast_data.to_excel(writer, sheet_name='S. cerevisiae conditions', index=False)
 cyano_data.to_excel(writer, sheet_name='Syn. PCC 6803 conditions', index=False)
-all_expression_data.to_excel(writer, sheet_name='All protein measurements', index=False)
+#coding_seq_zc.to_excel(writer, sheet_name='Coding sequence Z_C', index=False)
+#all_expression_data.to_excel(writer, sheet_name='All protein measurements', index=False)
 
 writer.close()
