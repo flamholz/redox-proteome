@@ -80,6 +80,11 @@ os.system(cp_cmd)
 gzip_cmd = 'gzip si_tables/SuppTable3_GTDB_ZC.csv'
 os.system(gzip_cmd)
 
+# Make an excel of the raw ZC values 
+pd.read_csv('data/gtdb/r207/bac120_nosc_vals_wide_compressed.csv'
+    ).to_excel('si_tables/SuppTable3_GTDB_ZC.xlsx',
+               sheet_name='bac120', index=False)
+
 # Read the correlation matrix for bac120 -- raw correlations first
 print('Making Table S4... GTDB ZC correlations')
 
