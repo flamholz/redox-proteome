@@ -45,7 +45,7 @@ color_map = {'Cyanobacteria': colors['green'], 'Eukaryotic alga': colors['dark_g
              'Heterotrophic bacteria': colors['purple'], 'Chemoautotroph': colors['yellow']}
 fast_growers_df['color'] = fast_growers_df.category.map(color_map)
 fast_growers_df['marker'] = fast_growers_df.short_name.map(
-    {'C. ohadii': 'o', 'V. natrigens': '^', 'S. elongatus PCC 11801': '>', 'T. crunogena': '<',
+    {'C. ohadii': 'o', 'P. celeri': 'p', 'V. natrigens': '^', 'S. elongatus PCC 11801': '>', 'T. crunogena': '<',
      'E. coli': 'h', 'C. perfingens': 'd', 'C. necator': '*'})
 
 fast_growers_df.to_csv('data/physiology/fastest_growers_4plotting.csv', index=False)
