@@ -1,3 +1,20 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:16ffee452bf3febcbe3f4c07d7daff21537a7bf6eab1d57abbcd31beed45a7be
-size 3127
+﻿short_name,group,category,generation_time_hr,growth_rate_hr,tmp_C,growth_mode,high_CO2,light,to_plot,reference,DOI,note
+C. ohadii,autotroph,Eukaryotic alga,2.45,0.282917217,30,photoheterotrophy,FALSE,100 microE,FALSE,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+C. ohadii,autotroph,Eukaryotic alga,2.23,0.310828332,35,photoheterotrophy,FALSE,100 microE,FALSE,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+C. ohadii,autotroph,Eukaryotic alga,2.76,0.251140283,40,photoheterotrophy,FALSE,100 microE,FALSE,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+C. ohadii,autotroph,Eukaryotic alga,3.75,0.184839248,30,photoautotrophy,FALSE,100 microE,FALSE,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+C. ohadii,autotroph,Eukaryotic alga,2.37,0.292467165,30,photoautotrophy,FALSE,3000 microE,TRUE,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+C. ohadii,autotroph,Eukaryotic alga,3.09,0.224319476,30,photoautotrophy,TRUE,100 microE,FALSE,Treves et al. 2017,https://doi.org/10.1016/j.cub.2017.07.014,
+P. celeri,autotroph,Eukaryotic alga,2.1,0.33,33,photoautotrophy,TRUE,900 microE,TRUE,Krishnan et al. 2021,https://doi.org/10.1038/s41598-021-91106-5,"lacks a CCM, grown in 0.5%"
+V. natrigens,heterotroph,Heterotrophic bacteria,0.25,2.772588722,37,heterotrophy,FALSE,,TRUE,Weinstock et al. 2016,https://doi.org/10.1038/nmeth.3970,
+V. natrigens,heterotroph,Heterotrophic bacteria,0.16,4.243758248,37,heterotrophy,FALSE,,TRUE,Eagon 1961,https://doi.org/10.1128/jb.83.4.736-737.1962,
+V. natrigens,heterotroph,Heterotrophic bacteria,0.12,5.941261548,37,heterotrophy,FALSE,,TRUE,Maida 2013,https://doi.org/10.1128/genomea.00648-13,
+C. perfingens,heterotroph,Heterotrophic bacteria,0.25,2.772588722,37,heterotrophy,FALSE,,TRUE,Labbe & Huang 1995,https://doi.org/10.4315/0362-028X-58.12.1303,37 C on thioglycollate medium
+C. perfingens,heterotroph,Heterotrophic bacteria,0.236,2.937064324,37,heterotrophy,FALSE,,TRUE,Labbe & Huang 1996,https://doi.org/10.4315/0362-028X-58.12.1303,38 C on thioglycollate medium
+C. perfingens,heterotroph,Heterotrophic bacteria,0.312,2.221625579,37,heterotrophy,FALSE,,TRUE,Labbe & Huang 1997,https://doi.org/10.4315/0362-028X-58.12.1303,39 C on thioglycollate medium
+E. coli,heterotroph,Heterotrophic bacteria,0.33,2.079441542,37,heterotrophy,FALSE,,TRUE,Bremer & Dennis 2008,https://doi.org/10.1128/ecosal.5.2.3,3 doublings per hour 
+S. elongatus PCC 11801,autotroph,Cyanobacteria,2.3,0.301368339,38,photoautotrophy,FALSE,1000 microE,TRUE,Jaiswal et al. 2018,https://doi.org/10.1038/s41598-018-34872-z,high CO2 not faster in this organism.
+T. crunogena,autotroph,Chemoautotroph,0.8,0.866433976,25,chemoautotrophy,FALSE,,TRUE,Jannasch 1985,https://doi.org/10.1099/00207713-35-4-422,
+T. crunogena,autotroph,Chemoautotroph,1.57,0.44,25,chemoautotrophy,TRUE,,TRUE,Dobrinski 2005,https://doi.org/10.1128/jb.187.16.5761-5766.2005,slower than ambient CO2 measurement from Jannasch? 
+C. necator,autotroph,Chemoautotroph,2.5,0.277258872,30,chemoautotrophy,TRUE,,TRUE,Claasens et al. 2020,https://doi.org/10.1073/pnas.2012288117,
+C. necator,autotroph,Chemoautotroph,21,0.033007009,30,chemoautotrophy,FALSE,,FALSE,Claasens et al. 2020,https://doi.org/10.1073/pnas.2012288117,
