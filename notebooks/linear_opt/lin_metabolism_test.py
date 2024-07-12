@@ -18,7 +18,7 @@ from os import path
 # Approximate concentrations and ratios for plotting
 # Based on Bennett et al. 2009 measurements in E. coli
 DEFAULT_ATP = 1.4e-6
-DEFAULT_NADH = 1.2e-7
+DEFAULT_ECH = 1.2e-7
 DEFAULT_RE = 10
 DEFAULT_RA = 0.3
 
@@ -41,9 +41,9 @@ class GrowthRateOptParamsTest(unittest.TestCase):
         self.assertEqual(opt.min_phi_O, 0)
         self.assertEqual(opt.ATP_maint, 0)
         self.assertEqual(opt.fixed_ATP, 1)
-        self.assertEqual(opt.fixed_NADH, 1)
+        self.assertEqual(opt.fixed_ECH, 1)
         self.assertEqual(opt.fixed_ADP, 1)
-        self.assertEqual(opt.fixed_NAD, 1)
+        self.assertEqual(opt.fixed_EC, 1)
         self.assertEqual(opt.fixed_C_red, 1)
         self.assertEqual(opt.fixed_ra, 1)
         self.assertEqual(opt.fixed_re, 1)
@@ -175,7 +175,7 @@ class BasicModelTest(unittest.TestCase):
         # Optimize with default params
         rl = SingleSubstrateMMRateLaw()
         params = GrowthRateOptParams(rate_law=rl,
-                                     fixed_ATP=0.01, fixed_NADH=0.01)
+                                     fixed_ATP=0.01, fixed_ECH=0.01)
         optimum, problem = self.model.maximize_growth_rate(params)
     
     def testMaxGrowthRateFirstOrderConcRatios(self):
@@ -184,13 +184,13 @@ class BasicModelTest(unittest.TestCase):
         params = GrowthRateOptParams(
             rate_law=rl,
             fixed_ATP=0.01, fixed_ra=0.1,
-            fixed_NADH=0.01, fixed_re=0.1)
+            fixed_ECH=0.01, fixed_re=0.1)
         optimum, problem = self.model.maximize_growth_rate(params)
 
     def testMaxGrowthRateMultiSubstrate(self):
         rl = MultiSubstrateMMRateLaw()
         params = GrowthRateOptParams(rate_law=rl,
-                                     fixed_ATP=0.01, fixed_NADH=0.01)
+                                     fixed_ATP=0.01, fixed_ECH=0.01)
         optimum, problem = self.model.maximize_growth_rate(params)
 
     def testMaxGrowthRateMultiSubstrateConcRatios(self):
@@ -198,21 +198,29 @@ class BasicModelTest(unittest.TestCase):
         params = GrowthRateOptParams(
             rate_law=rl,
             fixed_ATP=0.01, fixed_ra=0.1,
-            fixed_NADH=0.01, fixed_re=0.1)
+            fixed_ECH=0.01, fixed_re=0.1)
         optimum, problem = self.model.maximize_growth_rate(params)
 
     def testMaxGrowthRateDilution(self):
         params = GrowthRateOptParams(
-            do_dilution=True, fixed_ATP=0.01, fixed_NADH=0.01)
+            do_dilution=True, fixed_ATP=0.01, fixed_ECH=0.01)
+        optimum, problem = self.model.maximize_growth_rate(params)
+
+    def testMaxGrowthRateDiluteAsSum(self):
+        params = GrowthRateOptParams(
+            do_dilution=True, dilute_as_sum=True,
+            fixed_ATP=0.01, fixed_ra=0.1,
+            fixed_ECH=0.01, fixed_re=0.1)
         optimum, problem = self.model.maximize_growth_rate(params)
 
     def testProblemAsDict(self):
         # Put some concentrations in there
         params = GrowthRateOptParams(do_dilution=True,
-                                     fixed_ATP=0.01, fixed_NADH=0.01)
+                                     fixed_ATP=0.01, fixed_ECH=0.01)
         optimum, problem = self.model.maximize_growth_rate(params)
         d = self.model.solution_as_dict(problem, params)
 
+        self.assertGreaterEqual(d['lambda_hr'], 2)
         # Check that the concs we put in are there
         self.assertEqual(d['ATP_conc'], 0.01)
         self.assertEqual(d['ECH_conc'], 0.01)

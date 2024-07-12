@@ -15,7 +15,6 @@ __author__ = "Avi I. Flamholz"
 MW_C_ATOM       = 12.0  # molar mass of a carbon atom [g/mol]
 S_PER_HR        = 60*60 # seconds per hour 
 GC_PER_GDW      = 0.5   # g carbon per g dry weight
-# TODO: double check this value
 GC_PER_GPROTEIN = 0.5   # g carbon per g protein
 
 
@@ -60,7 +59,7 @@ class SingleSubstrateMMRateLaw(RateLawFunctor):
     
     In this simple version, each flux depends on only one substrate concentration.
 
-    Oxidation depends on NAD, reduction on NADH, anabolism and homeostasis on ATP.
+    Oxidation depends on EC, reduction on ECH, anabolism and homeostasis on ATP.
     Concentrations are normalized by the KM value given on construction. 
     """
     ORDER = 1
@@ -86,8 +85,8 @@ class SingleSubstrateMMRateLaw(RateLawFunctor):
 
         # In this simple version
         ATP_index = m_list.index('ATP')
-        NADH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
-        NAD_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
+        ECH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
+        EC_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
         ana_index = p_list.index('anabolism')
         ox_index = p_list.index('oxidation')
         red_index = p_list.index('reduction')
@@ -98,8 +97,8 @@ class SingleSubstrateMMRateLaw(RateLawFunctor):
         # one substrate.
         subs = np.zeros(S.shape)
         subs[ana_index, ATP_index] = 1
-        subs[red_index, NADH_index] = 1
-        subs[ox_index, NAD_index] = 1
+        subs[red_index, ECH_index] = 1
+        subs[ox_index, EC_index] = 1
         subs[h_index, ATP_index] = 1
 
         rescaled_concs = self._rescale_concs(concs) 
@@ -114,7 +113,7 @@ class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
     Fluxes depends on concentrations to the first power. In this version,
     each flux can depend on multiple substrate concentrations.
 
-    Oxidation depends on NAD, reduction on NADH, anabolism on NADH and ATP.
+    Oxidation depends on EC, reduction on ECH, anabolism on ECH and ATP.
     Concentrations are normalized by the KM value given on construction.
     """
     ORDER = 1
@@ -135,8 +134,8 @@ class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
 
         # Get the indices of the metabolites to make substrate matrices
         ATP_index = m_list.index('ATP')
-        NADH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
-        NAD_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
+        ECH_index = m_list.index('ECH')  # generic 2 e- carrier, reduced
+        EC_index = m_list.index('EC')    # generic 2 e- carrier, oxidized
         c_red_index = m_list.index('C_red')
         ec_ox_index = m_list.index('E_ox')
         biomass_index = m_list.index('biomass') 
@@ -151,8 +150,8 @@ class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
         # \sum(1*rescaled_conc) rather than 1*scaled_conc (the correct value).
         subs1 = np.zeros(S.shape)
         subs1[ana_index, ATP_index] = 1
-        subs1[ox_index, NAD_index] = 1
-        subs1[red_index, NADH_index] = 1
+        subs1[ox_index, EC_index] = 1
+        subs1[red_index, ECH_index] = 1
         subs1[h_index, ATP_index] = 1
 
         # second matrix for second set of substrates. here we are playing a little trick
@@ -160,7 +159,7 @@ class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
         # for homeostasis, which only has one substrate.
         subs2 = np.zeros(S.shape)
         subs2[ana_index, c_red_index] = 1
-        subs2[ox_index, NADH_index] = 1
+        subs2[ox_index, ECH_index] = 1
         subs2[red_index, ec_ox_index] = 1
         subs1[h_index, biomass_index] = 1
 
@@ -174,6 +173,8 @@ class GrowthRateOptParams(object):
 
     Attributes:
         do_dilution: boolean, whether to include dilution in the model.
+        dilute_as_sum: boolean, whether to dilute ATP as ATP + ADP and
+            ECH as ECH + EC+.
         do_maintenance: boolean, whether to include maintenance in the model.
         rate_law: RateLawFunctor, rate law to use.
         min_phi_O: float, minimum C mass fraction for other processes.
@@ -186,18 +187,18 @@ class GrowthRateOptParams(object):
         max_lambda_hr: float, maximum lambda value. Units of [1/hr].
         max_C_uptake: float, maximum C uptake rate. Units of [mol C/gCDW/s].
         fixed_ATP: float, fixed ATP concentration. [mol/gCDW] units.
-        fixed_NADH: float, fixed NADH concentration. [mol/gCDW] units.
-        fixed_re: float, fixed ratio of NAD/NADH concentrations.
+        fixed_ECH: float, fixed ECH concentration. [mol/gCDW] units.
+        fixed_re: float, fixed ratio of EC/ECH concentrations.
         fixed_ra: float, fixed ratio of ADP/ATP concentrations.
-        fixed_NAD: float, fixed NAD concentration. [mol/gCDW] units.
+        fixed_EC: float, fixed EC concentration. [mol/gCDW] units.
         fixed_ADP: float, fixed ADP concentration. [mol/gCDW] units.
         fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
     """
-    def __init__(self, do_dilution=False, rate_law=None,
+    def __init__(self, do_dilution=False, dilute_as_sum=False, rate_law=None,
                  min_phi_O=None, phi_O=None,
                  phi_red=None, max_phi_H=None,
                  maintenance_cost=0, max_lambda_hr=None, max_C_uptake=None,
-                 fixed_ATP=None, fixed_NADH=None,
+                 fixed_ATP=None, fixed_ECH=None,
                  fixed_ra=None, fixed_re=None, fixed_C_red=None):
         """Initializes the GrowthRateOptParams class.
 
@@ -213,8 +214,8 @@ class GrowthRateOptParams(object):
                 These are typically reported units for convenience.
             max_lambda_hr: float, maximum lambda value. Units of [1/hr].
             fixed_ATP: float, fixed ATP concentration. [mol/gCDW] units.
-            fixed_NADH: float, fixed NADH concentration. [mol/gCDW] units.
-            fixed_re: float, fixed ratio of NAD/NADH concentrations.
+            fixed_ECH: float, fixed ECH concentration. [mol/gCDW] units.
+            fixed_re: float, fixed ratio of EC/ECH concentrations.
             fixed_ra: float, fixed ratio of ADP/ATP concentrations.
             fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
         """
@@ -223,14 +224,23 @@ class GrowthRateOptParams(object):
 
         if do_dilution:
             msg = "Must define concentrations for dilution"
-            assert (fixed_ATP is not None) and (fixed_NADH is not None), msg
+            assert (fixed_ATP is not None) and (fixed_ECH is not None), msg
+
+        if dilute_as_sum:
+            msg = "Must set do_dilution = True to dilute_as_sum."
+            assert do_dilution, msg
+
+            # Need both ATP and ADP, ECH and EC concentrations.
+            msg = "Must provide fixed_re and fixed_ra for dilution_as_sum."
+            assert (fixed_re is not None) and (fixed_ra is not None), msg
 
         self.rate_law = rate_law or ZerothOrderRateLaw()
         if self.rate_law.ORDER > 0:
-            msg = "Concentration dependent rate laws require ATP and NADH concentrations."
-            assert (fixed_ATP is not None) and (fixed_NADH is not None), msg
+            msg = "Concentration dependent rate laws require ATP and ECH concentrations."
+            assert (fixed_ATP is not None) and (fixed_ECH is not None), msg
 
         self.do_dilution = do_dilution
+        self.dilute_as_sum = dilute_as_sum
         self.min_phi_O = min_phi_O or 0
         self.phi_O = phi_O
         self.phi_red = phi_red
@@ -243,9 +253,9 @@ class GrowthRateOptParams(object):
         self.fixed_ATP = fixed_ATP or 1
         self.fixed_ra = fixed_ra or 1
         self.fixed_ADP = self.fixed_ATP * self.fixed_ra
-        self.fixed_NADH = fixed_NADH or 1
+        self.fixed_ECH = fixed_ECH or 1
         self.fixed_re = fixed_re or 1
-        self.fixed_NAD = self.fixed_NADH * self.fixed_re
+        self.fixed_EC = self.fixed_ECH * self.fixed_re
         self.fixed_C_red = fixed_C_red or 1
 
         # Convert maintenance to mol ATP/gCDW/s
@@ -270,8 +280,8 @@ class GrowthRateOptParams(object):
             'opt.max_lambda_hr': self.max_lambda_hr,
             'opt.max_C_uptake': self.max_C_uptake,
             'opt.fixed_ATP_mol_gCDW': self.fixed_ATP,
-            'opt.fixed_NADH_mol_gCDW': self.fixed_NADH,
-            'opt.fixed_NAD_mol_gCDW': self.fixed_NAD,
+            'opt.fixed_ECH_mol_gCDW': self.fixed_ECH,
+            'opt.fixed_EC_mol_gCDW': self.fixed_EC,
             'opt.fixed_ADP_mol_gCDW': self.fixed_ADP,
             'opt.fixed_C_red_mol_gCDW': self.fixed_C_red,
             'opt.fixed_ra': self.fixed_ra,
@@ -291,7 +301,7 @@ class GrowthRateOptParams(object):
             max_lambda_hr=self.max_lambda_hr,
             max_C_uptake=self.max_C_uptake,
             fixed_ATP=self.fixed_ATP,
-            fixed_NADH=self.fixed_NADH,
+            fixed_ECH=self.fixed_ECH,
             fixed_ra=self.fixed_ra,
             fixed_re=self.fixed_re,
             fixed_C_red=self.fixed_C_red)
@@ -385,7 +395,7 @@ class LinearMetabolicModel(object):
     def set_S6(self, new_S6):
         """Sets the S6 value and updates stoichiometries accordingly.
 
-        Note: consuming NADH, i.e. making reduced biomass, is negative S6.
+        Note: consuming ECH, i.e. making reduced biomass, is negative S6.
 
         Assumes that changes in S6 are due only to changing Z_C,B.
         """
@@ -431,7 +441,7 @@ class LinearMetabolicModel(object):
         Assumes ZCorg is fixed, recalculates S6 accordingly.
         """
         # S6 is the number of electron carriers produced in anabolism. 
-        # So it's negative when anabolism consumes NADH. 
+        # So it's negative when anabolism consumes ECH. 
         new_S6 = (new_ZCB - self.ZCorg)/2
         # NOTE: electron carrier carries 2 electrons. 
 
@@ -511,8 +521,6 @@ class LinearMetabolicModel(object):
         
         TODO: make the output problem DCP-compliant.
             https://www.cvxpy.org/tutorial/dcp/index.html#dcp
-        TODO: what should kcat be? currently 50 /s for all processes. 
-        TODO: dilution for ADP and NAD? this is done in the numerical sims.
 
         Args:
             gr_opt_params: a GrowthRateOptimizationParams object.
@@ -524,7 +532,7 @@ class LinearMetabolicModel(object):
                 phi_o: fraction of biomass allocated to "other" processes.
                 max_lambda_hr: exponential growth rate in [1/hr] units (if max_lambda=True)
                 fixed_ATP: fixed ATP concentration [KM units]
-                fixed_NADH: fixed NADH concentration [KM units]
+                fixed_ECH: fixed ECH concentration [KM units]
                 maint: minimum maintenance ATP expenditure [mmol ATP/gDW/hr]
         """
         n_proc = self.n_processes
@@ -553,21 +561,35 @@ class LinearMetabolicModel(object):
         gammas = cp.Parameter(
             name='gammas', shape=n_proc, value=gamma_vals, pos=True)
 
-        # Internal metabolites like ATP and NADH must have concentrations 
+        # Internal metabolites like ATP and ECH must have concentrations 
         # if we want to account for dilution and/or concentration-dependent fluxes.
         c_vals = np.ones(n_met)
         ATP_index = self.m_df.index.get_loc('ATP')
         ADP_index = self.m_df.index.get_loc('ADP')
-        NADH_index = self.m_df.index.get_loc('ECH')
-        NAD_index = self.m_df.index.get_loc('EC')
+        ECH_index = self.m_df.index.get_loc('ECH')
+        EC_index = self.m_df.index.get_loc('EC')
         C_red_index = self.m_df.index.get_loc('C_red')
         c_vals[ATP_index] = params.fixed_ATP
         c_vals[ADP_index] = params.fixed_ADP
-        c_vals[NADH_index] = params.fixed_NADH
-        c_vals[NAD_index] = params.fixed_NAD
+        c_vals[ECH_index] = params.fixed_ECH
+        c_vals[EC_index] = params.fixed_EC
         c_vals[C_red_index] = params.fixed_C_red
         concs = cp.Parameter(
             name='concs', shape=n_met, nonneg=True, value=c_vals)
+        
+        # Since we don't have biosynthetic reactions for ATP or ECH,
+        # we can't enforce dilution of both simultaneously. Instead
+        # we allow dilution ATP and ECH according to the sum [ATP + ADP]
+        # and EC + ECH, respectively, with the "dilute as sum" option.
+        partner_concs = np.zeros(n_met)
+        partner_concs[ATP_index] = params.fixed_ADP
+        partner_concs[ADP_index] = params.fixed_ATP
+        partner_concs[ECH_index] = params.fixed_EC
+        partner_concs[EC_index] = params.fixed_ECH
+        conc_sum_tmp = c_vals + partner_concs
+        if params.dilute_as_sum:
+            concs = cp.Parameter(
+                name='concs', shape=n_met, nonneg=True, value=conc_sum_tmp)
 
         # Calculate fluxes using on the rate law functor.
         Js = params.rate_law.Apply(
@@ -594,10 +616,12 @@ class LinearMetabolicModel(object):
         metab_flux_balance = (self.S.T @ Js) - m
         if params.do_dilution:
             # Using growth rate in /s here to match units of fluxes.
+            # concs variable calculated above accounting for dilute_as_sum option.
             metab_flux_balance = (
                 metab_flux_balance - cp.multiply(growth_rate_s, concs))
 
-        # Can only enforce balancing for internal metabolites.
+        # Can only enforce flux balancing for internal metabolites.
+        # Note -- our convention is to make ATP and ECH internal, ADP and EC+ are not.
         internal_mets = self.m_df.internal.values.copy()
         internal_metab_flux_balance = cp.multiply(metab_flux_balance, internal_mets)
         constraints.append(internal_metab_flux_balance == 0)
@@ -780,11 +804,10 @@ class LinearMetabolicModel(object):
             phis = np.zeros(self.n_processes)
 
         # Get concs if they are in the model
-        concs = None
-        if 'concs' in opt_p.param_dict:
+        concs = opt_p.param_dict.get('concs', None)
+        if concs is not None:
             met_names = self.m_df.index.values
-            concs = opt_p.param_dict['concs'].value
-            for m, c in zip(met_names, concs):
+            for m, c in zip(met_names, concs.value):
                 soln_dict[m + '_conc'] = c
         
         # Get the fluxes using the rate law
