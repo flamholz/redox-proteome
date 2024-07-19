@@ -81,7 +81,7 @@ class BasicModelTest(unittest.TestCase):
     """Test growth rate params."""
 
     STOICHS = 'S1,S2,S3,S4,S5,S6'.split(',')
-    ZCS = 'ZCorg,ZCprod,ZCB'.split(',')
+    ZCS = 'ZCred,ZCprod,ZCB'.split(',')
 
     def setUp(self):
         # Loading the model of respiration just to exercise the code. 
@@ -94,23 +94,23 @@ class BasicModelTest(unittest.TestCase):
 
     def testSetS6(self):
         for v in np.arange(-3, 3):
-            zcorg = self.model.ZCorg
+            zcorg = self.model.ZCred
             expected_zcb = zcorg + 2*v
             self.model.set_S6(v)
             self.assertEqual(self.model.get_S6(), v)
             self.assertEqual(self.model.ZCB, expected_zcb)
 
-    def testSetZCorg(self):
+    def testSetZCred(self):
         for v in np.arange(-3, 3):
             zcb = self.model.ZCB
             expected_S6 = (zcb - v)/2
-            self.model.set_ZCorg(v)
+            self.model.set_ZCred(v)
             self.assertEqual(self.model.get_S6(), expected_S6)
-            self.assertEqual(self.model.ZCorg, v)
+            self.assertEqual(self.model.ZCred, v)
 
     def testSetZCB(self):
         for v in np.arange(-3, 3):
-            zcorg = self.model.ZCorg
+            zcorg = self.model.ZCred
             expected_S6 = (v - zcorg)/2
             self.model.set_ZCB(v)
             self.assertEqual(self.model.get_S6(), expected_S6)
@@ -230,7 +230,7 @@ class AutoModelTest(unittest.TestCase):
     """Test growth rate params."""
 
     STOICHS = 'S1,S2,S3,S4,S5,S6'.split(',')
-    ZCS = 'ZCorg,ZCprod,ZCB'.split(',')
+    ZCS = 'ZCred,ZCprod,ZCB'.split(',')
 
     def setUp(self):
         # Loading the model of respiration just to exercise the code. 
@@ -241,24 +241,24 @@ class AutoModelTest(unittest.TestCase):
     
     def testCopy(self):
         model_copy = self.model.copy()
-        self.assertEqual(self.model.ZCorg, model_copy.ZCorg)
+        self.assertEqual(self.model.ZCred, model_copy.ZCred)
         self.assertEqual(self.model.ZCprod, model_copy.ZCprod)
         self.assertEqual(self.model.ZCB, model_copy.ZCB)
-        self.assertEqual(self.model.ZCorg, model_copy.ZCorg)
+        self.assertEqual(self.model.ZCred, model_copy.ZCred)
         self.assertEqual(self.model.heterotroph, model_copy.heterotroph)
 
-    def testSetZCorg(self):
+    def testSetZCred(self):
         for v in np.arange(-3, 3):
             zcb = self.model.ZCB
             expected_S6 = (zcb - v)/2
-            self.model.set_ZCorg(v)
+            self.model.set_ZCred(v)
             self.assertEqual(self.model.get_S6(), expected_S6)
-            self.assertEqual(self.model.ZCorg, v)
+            self.assertEqual(self.model.ZCred, v)
 
     def testSetZCB(self):
         for v in np.arange(-3, 3):
-            zcorg = self.model.ZCorg
-            expected_S6 = (v - zcorg)/2
+            zcred = self.model.ZCred
+            expected_S6 = (v - zcred)/2
             self.model.set_ZCB(v)
             self.assertEqual(self.model.get_S6(), expected_S6)
             self.assertEqual(self.model.ZCB, v)

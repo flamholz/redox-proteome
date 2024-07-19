@@ -336,7 +336,7 @@ class LinearMetabolicModel(object):
         self.heterotroph = heterotroph
         
         # Record the ZC values
-        self.ZCorg = self.m_df.loc['C_red'].NOSC
+        self.ZCred = self.m_df.loc['C_red'].NOSC
         self.ZCprod = self.m_df.loc['C_ox'].NOSC
         self.ZCB = self.m_df.loc['biomass'].NOSC
         
@@ -399,25 +399,25 @@ class LinearMetabolicModel(object):
 
         Assumes that changes in S6 are due only to changing Z_C,B.
         """
-        new_ZCB = (self.ZCorg + 2*new_S6)
+        new_ZCB = (self.ZCred + 2*new_S6)
         self.set_ZCB(new_ZCB)
 
-    def set_ZCorg(self, new_ZCorg):
+    def set_ZCred(self, new_ZCred):
         """Sets the Z_C,org value and updates stoichiometries accordingly.
         
         Assumes ZCB is fixed, recalculates S1/S2 and S6 accordingly.
 
         Args:
-            new_ZCorg: float new Z_C,org value
+            new_ZCred: float new Z_C,org value
         """
-        new_SX = (self.ZCprod - new_ZCorg)/2
-        new_S6 = (self.ZCB - new_ZCorg)/2
+        new_SX = (self.ZCprod - new_ZCred)/2
+        new_S6 = (self.ZCB - new_ZCred)/2
 
         # NOTE: electron carrier carries 2 electrons. 
 
         # Update the NOSC of reduced carbon 
-        self.m_df.at['C_red', 'NOSC'] = new_ZCorg
-        self.ZCorg = new_ZCorg
+        self.m_df.at['C_red', 'NOSC'] = new_ZCred
+        self.ZCred = new_ZCred
 
         # update the stoichiometric matrix
         self.S_df.at['anabolism','EC'] = -new_S6
@@ -438,11 +438,11 @@ class LinearMetabolicModel(object):
     def set_ZCB(self, new_ZCB):
         """Sets the Z_C,B value and updates stoichiometries accordingly.
         
-        Assumes ZCorg is fixed, recalculates S6 accordingly.
+        Assumes ZCred is fixed, recalculates S6 accordingly.
         """
         # S6 is the number of electron carriers produced in anabolism. 
         # So it's negative when anabolism consumes ECH. 
-        new_S6 = (new_ZCB - self.ZCorg)/2
+        new_S6 = (new_ZCB - self.ZCred)/2
         # NOTE: electron carrier carries 2 electrons. 
 
         # Since all the fluxes are per-C, don't need to check stoichiometry.
@@ -679,7 +679,7 @@ class LinearMetabolicModel(object):
             model_dict[pname + '_kcat_s'] = k
             model_dict[pname + '_m_kDa'] = m      
         model_dict['ZCB'] = self.ZCB
-        model_dict['ZCorg'] = self.ZCorg
+        model_dict['ZCred'] = self.ZCred
         model_dict['ZCprod'] = self.ZCprod
         
         # Return the stoichiometries from the matrix
@@ -729,7 +729,7 @@ class LinearMetabolicModel(object):
         denom = g_ana*(b + S3*g_ox*phi_term)
         S6_ub = num / denom
 
-        # ZCorg bounds - lower bound first
+        # ZCred bounds - lower bound first
         zcb = sd['ZCB']
         zcprod = sd['ZCprod']
         phi_term = (-1 + phi_H + phi_O)
@@ -737,13 +737,13 @@ class LinearMetabolicModel(object):
         denom2 = (b + g_h*phi_H + S4*g_red*phi_term)
         num1 = -2*S2*g_red*(b + g_h*phi_H + S5*g_ana*phi_term)
         denom1 = g_ana*denom2
-        ZCorg_lb = (num1/denom1) + 2*mC*(-N + num2/denom2) + zcb
+        ZCred_lb = (num1/denom1) + 2*mC*(-N + num2/denom2) + zcb
         
         # Now upper bound
         num = g_ana*(b + g_h*phi_H + S3*g_ox*phi_term)*(2*N*mC - zcb)
         num += g_ox*zcprod*(b + g_h*phi_H + A*mC*g_ana*phi_term + S5*g_ana*phi_term)
         denom = g_ox*(b + g_h*phi_H) + g_ana*(-b - g_h*phi_H - (A*mC + S3 - S5)*g_ox*phi_term)
-        ZCorg_ub = num / denom
+        ZCred_ub = num / denom
 
         # lambda calculated from interdependence of fluxes
         J_ox = sd['oxidation_flux']
@@ -762,7 +762,7 @@ class LinearMetabolicModel(object):
         denom -= ((S6/mC) - N - (S1*g_ox)/(mC*g_ana))*S34_term
         lam_max = -3600*num/denom        
 
-        return lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub
+        return lam, lam_max, S6_lb, S6_ub, ZCred_lb, ZCred_ub
 
     def solution_as_dict(self, optimized_p, params):
         """Returns a dictionary of solution values for a solved problem.
@@ -838,17 +838,17 @@ class LinearMetabolicModel(object):
         # Note: we rely on the optimization to populate a few values
         # used in the analytic calculation, so success is required.
         #if optimized_p.status == cp.OPTIMAL:
-        #    lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
+        #    lam, lam_max, S6_lb, S6_ub, ZCred_lb, ZCred_ub = self._analytics_zo(d)
         #else:
-        #    lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = (
+        #    lam, lam_max, S6_lb, S6_ub, ZCred_lb, ZCred_ub = (
         #        np.NAN, np.NAN, np.NAN, np.NAN, np.NAN, np.NAN)
-        lam, lam_max, S6_lb, S6_ub, ZCorg_lb, ZCorg_ub = self._analytics_zo(d)
+        lam, lam_max, S6_lb, S6_ub, ZCred_lb, ZCred_ub = self._analytics_zo(d)
         d['analytic_lambda_zo'] = lam
         d['analytic_lambda_max_zo'] = lam_max
         d['S6_lb_zo'] = S6_lb
         d['S6_ub_zo'] = S6_ub
-        d['ZCorg_lb_zo'] = ZCorg_lb
-        d['ZCorg_ub_zo'] = ZCorg_ub
+        d['ZCred_lb_zo'] = ZCred_lb
+        d['ZCred_ub_zo'] = ZCred_ub
 
         # Calculate carbon use efficiency, CUE
         # Since Jana and Jox are written per C, can just divide.
