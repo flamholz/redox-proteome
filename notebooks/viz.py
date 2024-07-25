@@ -10,11 +10,11 @@ import seaborn as sns
 
 AX_FACECOLOR = '#E3DCD0'
 
-# Add Lucida Sans to the font manager
-import matplotlib
-fnames = 'LSANS,LSANSD,LSANSI,LSANSDI'.split(',')
-for fname in fnames:
-    matplotlib.font_manager.fontManager.addfont('/users/flamholz/Library/Fonts/{}.ttf'.format(fname))
+# # Add Lucida Sans to the font manager
+# import matplotlib
+# fnames = 'LSANS,LSANSD,LSANSI,LSANSDI'.split(',')
+# for fname in fnames:
+#     matplotlib.font_manager.fontManager.addfont('/users/flamholz/Library/Fonts/{}.ttf'.format(fname))
 
 # Style and useful function definitions.
 def titlebox(

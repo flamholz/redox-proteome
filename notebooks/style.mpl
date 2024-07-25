@@ -12,7 +12,7 @@ xtick.labelcolor : k
 ytick.color : k
 ytick.labelcolor : k
 legend.fontsize : 7
-font.family : DejaVu Sans
+font.family : Lucida Grande
 font.size : 8
 mathtext.fontset : custom
 mathtext.rm : DejaVu Sans
