@@ -532,7 +532,8 @@ def do_main(outdir, overwrite):
 
     # Parameters for the optimization of resp and ferm models
     params = GrowthRateOptParams(min_phi_O=0.4, **DEFAULT_OPT_VALS)
-    Cox_concs = [DEFAULT_C_OX/100, DEFAULT_C_OX, DEFAULT_C_OX*100]
+    Cox_concs = np.logspace(-1, 1, 3)*DEFAULT_C_OX
+    print('Cox concentrations: ', Cox_concs)
 
     # Output filenames
     out_fname_ferm = path.join(outdir, 'ferm_sampling.csv')
@@ -548,28 +549,26 @@ def do_main(outdir, overwrite):
             # Set the process masses to the sampled values for all models
             for pmass, process in zip(pmasses[:,idx], 'oxidation,reduction,anabolism'.split(',')):
                 ferm_lam.set_process_mass(process, pmass)
-                ferm_lam.set_process_mass(process, pmass)
+                ferm_lam_ext_C.set_process_mass(process, pmass)
                 resp_lam.set_process_mass(process, pmass)
             
             # Optimizing the heterotrophic growth rate given the parameters
-            opt, opt_prob = resp_lam.maximize_growth_rate(params)
+            _, opt_prob = resp_lam.maximize_growth_rate(params)
             d = resp_lam.results_as_dict(opt_prob, params)
             results.append(d)
 
             # Optimize the fermentative growth rate given the parameters
             # First run a fermentative model where we don't enforce mass balance of 
-            # internally produced organic carbon. 
+            # internally produced Cox. 
             ferm_params = params.copy()
-            ferm_opt, ferm_opt_prob = ferm_lam_ext_C.maximize_growth_rate(ferm_params)
-            d = auto_lam_ext_C.results_as_dict(ferm_opt_prob, ferm_params)
+            _, ferm_opt_prob = ferm_lam_ext_C.maximize_growth_rate(ferm_params)
+            d = ferm_lam_ext_C.results_as_dict(ferm_opt_prob, ferm_params)
             ferm_ext_C_results.append(d)
 
             # Now models with mass balance of Cox enforced at various concs. 
-            # To do this we need to set the Cox concentration so that dilution can be accounted for. 
             for c_ox in Cox_concs:
                 ferm_params.fixed_C_ox = c_ox
                 _, ferm_opt_prob = ferm_lam.maximize_growth_rate(ferm_params)
-            
                 d = ferm_lam.results_as_dict(ferm_opt_prob, ferm_params)
                 ferm_results.append(d)
 
