@@ -23,7 +23,7 @@ saving results to CSV files for later plotting.
 # Based on Bennett et al. 2009 measurements in E. coli
 DEFAULT_ATP = 1.4e-6
 DEFAULT_NADH = 1.2e-7
-DEFAULT_C_OX = 1e-5
+DEFAULT_C_OX = 1e-6
 DEFAULT_RE = 10
 DEFAULT_RA = 0.3
 DEFAULT_MAINTENANCE = 10
@@ -457,6 +457,7 @@ def do_main(outdir, overwrite):
             # Optimizing the heterotrophic growth rate given the parameters
             opt, opt_prob = resp_lam.maximize_growth_rate(params)
             d = resp_lam.results_as_dict(opt_prob, params)
+            d['run_index'] = idx
             results.append(d)
 
             # Optimize the autotrophic growth rate given the parameters
@@ -465,6 +466,7 @@ def do_main(outdir, overwrite):
             auto_params = params.copy()
             auto_opt, auto_opt_prob = auto_lam_ext_C.maximize_growth_rate(auto_params)
             d = auto_lam_ext_C.results_as_dict(auto_opt_prob, auto_params)
+            d['run_index'] = idx
             auto_ext_C_results.append(d)
 
             # Now models with mass balance of Cred enforced at various concs. 
@@ -478,6 +480,7 @@ def do_main(outdir, overwrite):
                 auto_opt, auto_opt_prob = auto_lam.maximize_growth_rate(auto_params)
             
                 d = auto_lam.results_as_dict(auto_opt_prob, auto_params)
+                d['run_index'] = idx
                 auto_results.append(d)
 
         # Output files are in the same order -- can match up model runs that way.
@@ -518,14 +521,72 @@ def do_main(outdir, overwrite):
         zcred_auto_df = pd.DataFrame(results)
         zcred_auto_df.to_csv(out_fname, index=False)
     
-    print('Loading fermentation model...')
+    print('Loading fermentation model(s)...')
     # Load models of auto and heterotrophy for comparison
     resp_lam = LinearMetabolicModel.FromFiles(resp_m_fname, resp_S_fname)
     ferm_lam = LinearMetabolicModel.FromFiles(ferm_m_fname, ferm_S_fname)
+    
+    ferm_no_ATP_homeostasis = ferm_lam.drop_process('ATP_homeostasis')
+    ferm_no_ECH_homeostasis = ferm_lam.drop_process('ECH_homeostasis')
+    ferm_no_homeostasis = ferm_no_ECH_homeostasis.drop_process('ATP_homeostasis')
 
-    # A model of fermentation where we don't enforce Cox homeostasis at all
+    # A model of fermentation where we don't enforce Cox mass-balance at all
     ferm_lam_ext_C = LinearMetabolicModel.FromFiles(ferm_m_fname, ferm_S_fname, heterotroph=False)
     ferm_lam_ext_C.m_df.loc['C_ox', 'internal'] = 0
+
+    # A model with no Cox constraint that also makes more ATP in the reduction step,
+    # e.g. as in mixed acid.
+    ferm_lam_ext_C_more_ATP = ferm_lam_ext_C.copy()
+    ferm_lam_ext_C_more_ATP.set_ATP_yield('reduction', 0.333)
+
+    ferm_lam_dict = {'ferm_full': ferm_lam,
+                     'ferm_full_ext_C': ferm_lam_ext_C,
+                     'ferm_no_ATP_homeostasis': ferm_no_ATP_homeostasis,
+                     'ferm_no_ECH_sink': ferm_no_ECH_homeostasis,
+                     'ferm_no_sinks': ferm_no_homeostasis}
+
+    print('Optimizing fermentation models over a range of C_ox concentrations...')
+    out_fname = path.join(outdir, 'ferm_fix_Cox.csv')
+
+    # Skip this optimization if output exists and we're not overwriting
+    if not path.exists(out_fname) or overwrite:
+        C_ox_concs = np.logspace(-8, 1, 50)
+        results = []
+
+        for c in C_ox_concs:
+            # Make fresh parameters with a new max_lambda_hr
+            params = GrowthRateOptParams(min_phi_O=0.4, maintenance_cost=0,
+                                        fixed_C_ox=c, **DEFAULT_OPT_VALS)
+            
+            for label, my_lam in ferm_lam_dict.items():
+                opt, opt_prob = my_lam.maximize_growth_rate(params)
+                d = my_lam.results_as_dict(opt_prob, params)
+                d['model'] = label
+                results.append(d)
+
+        conc_df = pd.DataFrame(results)
+        conc_df.to_csv(out_fname, index=False)
+
+    print('Optimizing fermentation models over a range of fixed lambda values...')
+    lambdas = np.arange(0.1, 2, 0.01)
+    out_fname = path.join(outdir, 'ferm_fix_lambda.csv')
+    results = []
+
+    # Skip this optimization if output exists and we're not overwriting
+    if not path.exists(out_fname) or overwrite:
+        for lam_val in lambdas:
+            # Make fresh parameters with a new max_lambda_hr
+            params = GrowthRateOptParams(min_phi_O=0.4, max_lambda_hr=lam_val,
+                                         maintenance_cost=0, fixed_C_ox=DEFAULT_C_OX,
+                                         **DEFAULT_OPT_VALS)
+            
+            # Optimize the growth rate given the parameters
+            opt, opt_prob = ferm_lam.maximize_growth_rate(params)
+            d = ferm_lam.results_as_dict(opt_prob, params)
+            results.append(d)
+
+        lam_df = pd.DataFrame(results)
+        lam_df.to_csv(out_fname, index=False)
 
     print('Comparing fermentation and respiration with sampled gamma values...')
     # Use sampled process masses from above from the comparison of autotrophy and respiration
@@ -538,11 +599,13 @@ def do_main(outdir, overwrite):
     # Output filenames
     out_fname_ferm = path.join(outdir, 'ferm_sampling.csv')
     out_fname_ferm_ext_C = path.join(outdir, 'ferm_sampling_ext_C.csv')
+    out_fname_ferm_ext_C_more_ATP = path.join(outdir, 'ferm_sampling_ext_C_more_ATP.csv')
     out_fname_resp = path.join(outdir, 'respiration_sampling_ferm_comparison.csv')
 
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname_ferm) or overwrite:
         ferm_results = []
+        ferm_ext_C_more_ATP_results = []
         ferm_ext_C_results = []
         results = []
         for idx in range(100):
@@ -550,11 +613,13 @@ def do_main(outdir, overwrite):
             for pmass, process in zip(pmasses[:,idx], 'oxidation,reduction,anabolism'.split(',')):
                 ferm_lam.set_process_mass(process, pmass)
                 ferm_lam_ext_C.set_process_mass(process, pmass)
+                ferm_lam_ext_C_more_ATP.set_process_mass(process, pmass)
                 resp_lam.set_process_mass(process, pmass)
             
             # Optimizing the heterotrophic growth rate given the parameters
             _, opt_prob = resp_lam.maximize_growth_rate(params)
             d = resp_lam.results_as_dict(opt_prob, params)
+            d['run_index'] = idx
             results.append(d)
 
             # Optimize the fermentative growth rate given the parameters
@@ -563,13 +628,21 @@ def do_main(outdir, overwrite):
             ferm_params = params.copy()
             _, ferm_opt_prob = ferm_lam_ext_C.maximize_growth_rate(ferm_params)
             d = ferm_lam_ext_C.results_as_dict(ferm_opt_prob, ferm_params)
+            d['run_index'] = idx
             ferm_ext_C_results.append(d)
+
+            # Same as above, but with a model that gets more ATP from fermentation
+            _, ferm_opt_prob = ferm_lam_ext_C_more_ATP.maximize_growth_rate(ferm_params)
+            d = ferm_lam_ext_C_more_ATP.results_as_dict(ferm_opt_prob, ferm_params)
+            d['run_index'] = idx
+            ferm_ext_C_more_ATP_results.append(d)
 
             # Now models with mass balance of Cox enforced at various concs. 
             for c_ox in Cox_concs:
                 ferm_params.fixed_C_ox = c_ox
                 _, ferm_opt_prob = ferm_lam.maximize_growth_rate(ferm_params)
                 d = ferm_lam.results_as_dict(ferm_opt_prob, ferm_params)
+                d['run_index'] = idx
                 ferm_results.append(d)
 
         # Output files are in the same order -- can match up model runs that way.
@@ -581,6 +654,10 @@ def do_main(outdir, overwrite):
         ferm_gamma_ext_C_df = pd.DataFrame(ferm_ext_C_results)
         ferm_gamma_ext_C_df['model'] = 'fermentation_ext_C'
         ferm_gamma_ext_C_df.to_csv(out_fname_ferm_ext_C, index=False)
+
+        ferm_gamma_ext_C_more_ATP_df = pd.DataFrame(ferm_ext_C_more_ATP_results)
+        ferm_gamma_ext_C_more_ATP_df['model'] = 'fermentation_more_ATP'
+        ferm_gamma_ext_C_more_ATP_df.to_csv(out_fname_ferm_ext_C_more_ATP, index=False)
 
         gamma_df = pd.DataFrame(results)
         gamma_df['model'] = 'respiration'
