@@ -1,0 +1,6 @@
+﻿process,C_red,C_ox,C_ferm,E_ox,E_red,EC,ECH,ADP,ATP,biomass,kcat_s,m_kDa,note
+oxidation,-1,1,0,0,0,-0.333,0.333,-0.333,0.333,0,50,1000,"glycolysis 2 ATP 2 NADH from 6 C, so 1/3 of each per C."
+reduction,0,-1,1,0,0,0.333,-0.333,0,0,0,50,1000,"terminal acceptor is product of donor, ""pyruvate -> lactate"" yields 0 ATP"
+anabolism,-1,0,0,0,0,0,0,0.1,-0.1,1,50,1000,"anabolism from glucose, assume biomass redox ≈ 0 = glucose as a baseline. Biomass is in units of C atoms"
+ATP_homeostasis,0,0,0,0,0,0,0,1,-1,0,50,10,a single regulated ATPase to balance production and demand
+ECH_homeostasis,0,0,0,-0.5,0.5,1,-1,0,0,0,50,10,a redox sink not coupled to ATP production
