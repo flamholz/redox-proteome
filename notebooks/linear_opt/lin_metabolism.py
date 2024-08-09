@@ -61,6 +61,9 @@ class SingleSubstrateMMRateLaw(RateLawFunctor):
 
     Oxidation depends on EC, reduction on ECH, anabolism and homeostasis on ATP.
     Concentrations are normalized by the KM value given on construction. 
+
+    NOTE: this formulation won't work for fermentation, where the oxidized product
+    is a substrate of the reduction reaction... 
     """
     ORDER = 1
     NAME = 'SingleSubstrateMM'
@@ -180,7 +183,8 @@ class GrowthRateOptParams(object):
         min_phi_O: float, minimum C mass fraction for other processes.
         phi_O: float, mass C fraction for other processes.
             Only one of min_phi_O and phi_O should be set.
-        max_phi_H: float, minimum C mass fraction for homeostasis.
+        max_phi_H: float, minimum C mass fraction for ATP homeostasis.
+        max_phi_S: float, minimum C mass fraction for ECH sink.
         maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
         ATP_maint: float, maintenance in units of [mol ATP/gCDW/s].
@@ -193,13 +197,15 @@ class GrowthRateOptParams(object):
         fixed_EC: float, fixed EC concentration. [mol/gCDW] units.
         fixed_ADP: float, fixed ADP concentration. [mol/gCDW] units.
         fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
+        fixed_C_ox: float, fixed oxidized C concentration. [mol/gCDW] units.
     """
     def __init__(self, do_dilution=False, dilute_as_sum=False, rate_law=None,
                  min_phi_O=None, phi_O=None,
-                 phi_red=None, max_phi_H=None,
+                 phi_red=None, max_phi_H=None, max_phi_S=None,
                  maintenance_cost=0, max_lambda_hr=None, max_C_uptake=None,
                  fixed_ATP=None, fixed_ECH=None,
-                 fixed_ra=None, fixed_re=None, fixed_C_red=None):
+                 fixed_ra=None, fixed_re=None,
+                 fixed_C_red=None, fixed_C_ox=None):
         """Initializes the GrowthRateOptParams class.
 
         Args:
@@ -210,6 +216,7 @@ class GrowthRateOptParams(object):
                 Only one of min_phi_O and phi_O should be set.
             phi_red: float, C mass fraction catalyzing reduction.
             max_phi_H: float, maximum C mass fraction for homeostasis.
+            max_phi_S: float, maximum C mass fraction for ECH sink.
             maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
             max_lambda_hr: float, maximum lambda value. Units of [1/hr].
@@ -218,6 +225,7 @@ class GrowthRateOptParams(object):
             fixed_re: float, fixed ratio of EC/ECH concentrations.
             fixed_ra: float, fixed ratio of ADP/ATP concentrations.
             fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
+            fixed_C_ox: float, fixed oxidized C concentration. [mol/gCDW] units.
         """
         msg = "Only one of min_phi_O and phi_O should be set."
         assert (min_phi_O is None) or (phi_O is None), msg
@@ -245,6 +253,7 @@ class GrowthRateOptParams(object):
         self.phi_O = phi_O
         self.phi_red = phi_red
         self.max_phi_H = max_phi_H
+        self.max_phi_S = max_phi_S
         self.max_lambda_hr = max_lambda_hr
         self.max_C_uptake = max_C_uptake
 
@@ -257,6 +266,7 @@ class GrowthRateOptParams(object):
         self.fixed_re = fixed_re or 1
         self.fixed_EC = self.fixed_ECH * self.fixed_re
         self.fixed_C_red = fixed_C_red or 1
+        self.fixed_C_ox = fixed_C_ox or 1
 
         # Convert maintenance to mol ATP/gCDW/s
         self.maintenance_cost = maintenance_cost or 0
@@ -265,16 +275,14 @@ class GrowthRateOptParams(object):
 
     def as_dict(self):
         """Returns a dictionary of parameters."""
-        max_phi_H = None
-        if self.max_phi_H is not None:
-            max_phi_H = self.max_phi_H
-
         return {
             'opt.do_dilution': self.do_dilution,
             'opt.min_phi_O': self.min_phi_O,
             'opt.phi_O': self.phi_O,
             'opt.max_phi_H_set': self.max_phi_H is not None,
             'opt.max_phi_H_value': self.max_phi_H,
+            'opt.max_phi_S_set': self.max_phi_S is not None,
+            'opt.max_phi_S_value': self.max_phi_S,
             'opt.maintenance_cost_mmol_gDW_hr': self.maintenance_cost,
             'opt.ATP_maint_mol_gCDW_s': self.ATP_maint,
             'opt.max_lambda_hr': self.max_lambda_hr,
@@ -284,6 +292,7 @@ class GrowthRateOptParams(object):
             'opt.fixed_EC_mol_gCDW': self.fixed_EC,
             'opt.fixed_ADP_mol_gCDW': self.fixed_ADP,
             'opt.fixed_C_red_mol_gCDW': self.fixed_C_red,
+            'opt.fixed_C_ox_mol_gCDW': self.fixed_C_ox,
             'opt.fixed_ra': self.fixed_ra,
             'opt.fixed_re': self.fixed_re,
             'opt.rate_law_name': self.rate_law.NAME,
@@ -297,6 +306,7 @@ class GrowthRateOptParams(object):
             min_phi_O=self.min_phi_O,
             phi_O=self.phi_O,
             max_phi_H=self.max_phi_H,
+            max_phi_S=self.max_phi_S,
             maintenance_cost=self.maintenance_cost,
             max_lambda_hr=self.max_lambda_hr,
             max_C_uptake=self.max_C_uptake,
@@ -304,7 +314,9 @@ class GrowthRateOptParams(object):
             fixed_ECH=self.fixed_ECH,
             fixed_ra=self.fixed_ra,
             fixed_re=self.fixed_re,
-            fixed_C_red=self.fixed_C_red)
+            fixed_C_red=self.fixed_C_red,
+            fixed_C_ox=self.fixed_C_ox)
+
 
 class LinearMetabolicModel(object):
     """Coarse-grained linear model of resource allocation while balancing ATP and e- fluxes."""
@@ -349,6 +361,12 @@ class LinearMetabolicModel(object):
     def copy(self):
         return LinearMetabolicModel(self.m_df.copy(), self.S_df.copy(),
                                     self.heterotroph)
+
+    def drop_process(self, process):
+        """Removes a process from the model."""
+        S_copy = self.S_df.copy().drop(process)
+        m_copy = self.m_df.copy()
+        return LinearMetabolicModel(m_copy, S_copy, self.heterotroph)
 
     def print_model(self):
         print("Metabolites:")
@@ -569,11 +587,13 @@ class LinearMetabolicModel(object):
         ECH_index = self.m_df.index.get_loc('ECH')
         EC_index = self.m_df.index.get_loc('EC')
         C_red_index = self.m_df.index.get_loc('C_red')
+        C_ox_index = self.m_df.index.get_loc('C_ox')
         c_vals[ATP_index] = params.fixed_ATP
         c_vals[ADP_index] = params.fixed_ADP
         c_vals[ECH_index] = params.fixed_ECH
         c_vals[EC_index] = params.fixed_EC
         c_vals[C_red_index] = params.fixed_C_red
+        c_vals[C_ox_index] = params.fixed_C_ox
         concs = cp.Parameter(
             name='concs', shape=n_met, nonneg=True, value=c_vals)
         
@@ -608,12 +628,12 @@ class LinearMetabolicModel(object):
         obj = cp.Maximize(growth_rate_hr)  # optimum has /hr units.
 
         # Maintenance is zero for all metabolites except ATP
-        m_vals = np.zeros(n_met)
-        m_vals[ATP_index] = params.ATP_maint
-        m = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=m_vals)
+        b_vals = np.zeros(n_met)
+        b_vals[ATP_index] = params.ATP_maint
+        b = cp.Parameter(name='maint', shape=n_met, nonneg=True, value=b_vals)
 
         # Flux balance constraint, including ATP maintenance and dilution if configured.
-        metab_flux_balance = (self.S.T @ Js) - m
+        metab_flux_balance = (self.S.T @ Js) - b
         if params.do_dilution:
             # Using growth rate in /s here to match units of fluxes.
             # concs variable calculated above accounting for dilute_as_sum option.
@@ -642,8 +662,10 @@ class LinearMetabolicModel(object):
         if params.max_phi_H is not None:
             h_index = self.S_df.index.get_loc('ATP_homeostasis')
             constraints.append(phis[h_index] <= params.max_phi_H)
+        if params.max_phi_S is not None:
+            s_index = self.S_df.index.get_loc('ECH_homeostasis')
+            constraints.append(phis[s_index] <= params.max_phi_S)
         if params.phi_red is not None:
-            # Fix the phi_red value
             red_index = self.S_df.index.get_loc('reduction')
             constraints.append(phis[red_index] == params.phi_red)
 
@@ -660,11 +682,7 @@ class LinearMetabolicModel(object):
             two-tuple of (lambda, problem object). lambda = 0 when infeasible.
         """
         p = self.max_growth_rate_problem(gr_opt_params)
-        soln = p.solve(solver=solver)
-        #try:
-        #    soln = p.solve()
-        #except cp.SolverError:
-        #    return 0, p
+        soln = p.solve(solver=solver, reoptimize=True)
         
         if p.status in ("infeasible", "unbounded"):
             return 0, p
