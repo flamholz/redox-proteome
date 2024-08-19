@@ -184,6 +184,7 @@ def do_main(outdir, overwrite):
     # Sweep a range of anabolism gamma values by setting a 
     # fixed anabolism process mass in kDa units.
     mKdas = np.logspace(2, 4, 50)
+    out_fname = path.join(outdir, 'fix_g_ana.csv')
 
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
