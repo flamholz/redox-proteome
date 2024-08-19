@@ -7,7 +7,7 @@ from scipy.stats import linregress, gmean, pearsonr
 from sklearn.metrics import r2_score
 from os import path
 
-# Read the NOSC values for bac120 as a wide-form matrix
+# Read the ZC values for bac120 as a wide-form matrix
 print('Reading calculated bac120 NOSC values...')
 bac120_nosc_df = pd.read_csv('data/gtdb/r207/bac120_nosc_vals_wide.csv', index_col=0)
 
@@ -22,7 +22,8 @@ bac120_nosc_df = bac120_nosc_df.reset_index().set_index('trimmed_accession')
 bac120_meta_df = pd.read_csv('data/gtdb/r207/bac120_msa_marker_info_r207_annot.csv',
                              index_col=0)
 
-# Read the genome average NOSC values for representative genomes
+# Read the genome average ZC values for representative genomes
+# These are calculated via munge/calc_genome_nosc_batch.py
 reps_genome_nosc_df = pd.read_csv('data/gtdb/r207/genome_average_nosc.csv', index_col=0)
 
 # Merge the genome average values into the bac120 nosc dataframe
@@ -93,7 +94,6 @@ nosc_corr_controlled = pg.pairwise_corr(
     bac120_nosc_df, columns=pairwise_cols, covar='genome_avg_NOSC',
     padjust='fdr_bh')
 
-
 f = lambda row: ','.join(sorted(row))
 def _save_corr_df(corr_df, fname):
     # Add descriptions of the two columns
@@ -104,8 +104,7 @@ def _save_corr_df(corr_df, fname):
     corr_df['X_COG'] = bac120_meta_df.loc[corr_df.X].COG.values
     corr_df['Y_COG'] = bac120_meta_df.loc[corr_df.Y].COG.values
 
-    # Order-independent COG-pair by sorting the high-level COG-categories
-    
+    # Pair of COG categories represented    
     corr_df['COG_pair'] = list(map(f, corr_df['X_COG,Y_COG'.split(',')].values))
     
     # Save

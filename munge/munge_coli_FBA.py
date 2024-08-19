@@ -172,11 +172,11 @@ growth_mat_df = growth_mat_df.drop(no_grow.index[no_grow]).sort_values('c_source
     'c_source_type,c_source'.split(','))
 
 # Save the growth matrix
-growth_mat_df.to_csv('../output/iML1515_growth_rate_matrix.csv')
+growth_mat_df.to_csv('output/iML1515_growth_rate_matrix.csv')
 
 # Make a binary version of the growth matrix for plotting
 binary_growth_mat_df = growth_mat_df > 0.001
-binary_growth_mat_df.to_csv('../output/iML1515_binary_growth_matrix.csv')
+binary_growth_mat_df.to_csv('output/iML1515_binary_growth_matrix.csv')
 
 # Maintenance never exceeds the minimum
 # -- see that 6.86 is the only value
