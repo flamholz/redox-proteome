@@ -24,10 +24,16 @@ numerical optimization and metabolic network models
 pip install cobra cvxpy 
 ```
 
-and various utilities
+biology and chemistry utilities
 
 ```
-pip install biopython tqdm lxml
+pip install biopython rdkit
+```
+
+and other utilities
+
+```
+pip install tqdm lxml
 ```
 
 ## Directories
