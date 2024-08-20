@@ -2,6 +2,10 @@ import unittest
 
 from seq_util import *
 
+cwd = path.dirname(__file__)
+AA_DF = pd.read_csv(path.join(cwd, '../data/aa_nosc.csv')).set_index('letter_code')
+
+
 # Each example has a sequence -> (NOSC, NC)
 EXAMPLES = {
     # ALA has 3 C atoms and ZC = 0
@@ -47,6 +51,16 @@ class TestSeqUtil(unittest.TestCase):
             res_NOSC = res_Ce/res_NC
             self.assertEqual(NC, res[1], msg=seq)
             self.assertAlmostEqual(res_NOSC, NOSC, msg=seq)
+
+    def test_calc_nosc_from_smiles(self):
+        for aa, row in AA_DF.iterrows():
+            if aa == 'U':
+                # Formula doesn't work for selenocysteine
+                continue
+            smiles = row['canonical_SMILES']
+            res = calc_nosc_from_smiles(smiles)
+            self.assertAlmostEqual(res, row['NOSC'], msg=aa, places=2)
+
 
 if __name__ == '__main__':
     unittest.main()
