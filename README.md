@@ -63,7 +63,11 @@ Reference coding sequences live in `data/genomes/` and were drawn from UniProt e
 
 ## Amino acid properties 
 
-Amino acid molecular weights, carbon content and $Z_C$ values are found in data/aa_nosc.csv. $Z_C$ values are drawn from LaRowe & Amend, ISME J 2016 and were checked by manual calculation (TODO). Polar requirement and hydropathy values are drawn from Haig & Hurst J. Mol. Evol. 1991.
+Amino acid molecular weights, carbon content and $Z_C$ values are found in data/aa_nosc.csv. 
+
+$Z_C$ values are drawn from LaRowe & Amend, ISME J 2016 and were checked by comparing to calculations based on atomic content. Atomic content was calculated from SMILES strings retrieved from PubChem. $Z_C$ values were calculated according to the formula provided by the above ref.
+
+Polar requirement and hydropathy values are drawn from Haig & Hurst J. Mol. Evol. 1991.
 
 ## Proteomics data
 
