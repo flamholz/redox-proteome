@@ -134,10 +134,8 @@ def do_main(outdir, overwrite):
         for i, ATP in tqdm(enumerate(concs), desc='ATP', position=0):
             for j, ECH in tqdm(enumerate(concs), desc='ECH', position=1, leave=False):
                 # As calculated in the SI, 1 mM ≈ 6e-6 mol/gC
-                # Following the Bar-Even paper we set the KM to 100 uM ≈ 6e-8 mol/gC
-                # Default KM is ≈100 uM as per the Bar-Even paper. 
-                # 100e-6 mol/L =  
-                my_rate_law = MultiSubstrateMMRateLaw(KM=6e-8)
+                # Following the Bar-Even paper we set the KM to 100 uM ≈ 6e-7 mol/gC
+                my_rate_law = MultiSubstrateMMRateLaw(KM=6e-7)
                 my_opts = DEFAULT_OPT_VALS.copy()
                 my_opts['fixed_ATP'] = ATP
                 my_opts['fixed_ECH'] = ECH
