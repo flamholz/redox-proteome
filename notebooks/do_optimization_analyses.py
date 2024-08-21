@@ -3,17 +3,15 @@ import numpy as np
 import os
 import pandas as pd
 import seaborn as sns
-import viz
 
-from linear_opt.lin_metabolism import MW_C_ATOM
-from linear_opt.lin_metabolism import LinearMetabolicModel
-from linear_opt.lin_metabolism import GrowthRateOptParams
 from matplotlib import pyplot as plt
 from os import path
+from tqdm import tqdm
 
 from linear_opt.lin_metabolism import MW_C_ATOM
-from linear_opt.lin_metabolism import LinearMetabolicModel
 from linear_opt.lin_metabolism import GrowthRateOptParams
+from linear_opt.lin_metabolism import LinearMetabolicModel
+from linear_opt.lin_metabolism import MultiSubstrateMMRateLaw
 
 """This script runs all model optimization analyses, 
 saving results to CSV files for later plotting. 
@@ -63,7 +61,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for lam_val in lambdas:
+        for lam_val in tqdm(lambdas, desc='max_lambda'):
             # Make fresh parameters with a new max_lambda_hr
             params = GrowthRateOptParams(min_phi_O=0.4, max_lambda_hr=lam_val, max_phi_H=0,
                                          maintenance_cost=0, **DEFAULT_OPT_VALS)
@@ -84,7 +82,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for lam_val in lambdas:
+        for lam_val in tqdm(lambdas, desc='max_lambda'):
             params = GrowthRateOptParams(min_phi_O=0.4, max_lambda_hr=lam_val, max_phi_H=0,
                                          maintenance_cost=DEFAULT_MAINTENANCE,
                                          **DEFAULT_OPT_VALS)
@@ -99,6 +97,66 @@ def do_main(outdir, overwrite):
         phi_df['expected_lambda'] = MW_C_ATOM*3600*phi_df['expected_Jana']
         phi_df.to_csv(out_fname, index=False)
 
+    print ('Sweeping pairs of (ATP, ECH) concentrations...')
+    out_fname = path.join(outdir, 'fix_ATP_ECH.csv')
+    concs = np.logspace(-9, -2, 100)
+
+    # Skip this optimization if output exists and we're not overwriting
+    if not path.exists(out_fname) or overwrite:
+        # Sweep ATP and ECH concentrations with fixed re and ra ratios. 
+        results = []
+
+        for i, ATP in tqdm(enumerate(concs), desc='ATP', position=0):
+            for j, ECH in tqdm(enumerate(concs), desc='ECH', position=1, leave=False):
+                my_opts = DEFAULT_OPT_VALS.copy()
+                my_opts['fixed_ATP'] = ATP
+                my_opts['fixed_ECH'] = ECH
+                params = GrowthRateOptParams(min_phi_O=0.4, **my_opts)
+
+                # Optimize the growth rate given the parameters
+                opt, opt_prob = lam.maximize_growth_rate(params)
+                d = lam.results_as_dict(opt_prob, params)
+                results.append(d)
+    
+        # Save the results to a CSV file
+        lambda_df = pd.DataFrame(results)
+        lambda_df.to_csv(out_fname, index=False)
+
+    # Same as above, but using a michaeles-menten like rate law
+    print('Sweeping pairs of (ATP, ECH) concentrations with Michaelis-Menten kinetics...')
+    out_fname = path.join(outdir, 'fix_ATP_ECH_MM.csv')
+
+    # Skip this optimization if output exists and we're not overwriting
+    if not path.exists(out_fname) or overwrite:
+        # Same as above, multi-substrate michaelis menten rate law
+        results = []
+
+        for i, ATP in tqdm(enumerate(concs), desc='ATP', position=0):
+            for j, ECH in tqdm(enumerate(concs), desc='ECH', position=1, leave=False):
+                # As calculated in the SI, 1 mM ≈ 6e-6 mol/gC
+                # Following the Bar-Even paper we set the KM to 100 uM ≈ 6e-8 mol/gC
+                # Default KM is ≈100 uM as per the Bar-Even paper. 
+                # 100e-6 mol/L =  
+                my_rate_law = MultiSubstrateMMRateLaw(KM=6e-8)
+                my_opts = DEFAULT_OPT_VALS.copy()
+                my_opts['fixed_ATP'] = ATP
+                my_opts['fixed_ECH'] = ECH
+                params = GrowthRateOptParams(
+                    min_phi_O=0.4, rate_law=my_rate_law, **my_opts)
+                opt = np.NaN
+                try:
+                    # Optimize the growth rate given the parameters
+                    opt, opt_prob = lam.maximize_growth_rate(params)
+                    d = lam.results_as_dict(opt_prob, params)
+                    results.append(d)
+                except:
+                    # Optimal solution not found
+                    pass
+
+        # Save the results to a CSV file
+        lambda_df = pd.DataFrame(results)
+        lambda_df.to_csv(out_fname, index=False)
+
     # Fix phi_red and allow everything else to be optimized
     print('Optimizing over a range of fixed phi_red values...')
     out_fname = path.join(outdir, 'fix_phi_red.csv')
@@ -109,8 +167,8 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for phi_r in phi_reds:
-            for s4 in S4vals:
+        for phi_r in tqdm(phi_reds, desc='fixed_phi_red', position=0):
+            for s4 in tqdm(S4vals, desc='S4', position=1, leave=False):
                 my_lam = lam.copy()
                 my_lam.set_ATP_yield('reduction', s4)
                 params = GrowthRateOptParams(min_phi_O=0.4, phi_red=phi_r, **DEFAULT_OPT_VALS)
@@ -133,7 +191,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:    
         results = []
-        for z in ZCBs:
+        for z in tqdm(ZCBs, desc='fixed_ZCB'):
             # Test with and without ATP homeostasis -- first with
             ref_lam = lam.copy()
             ref_lam.set_ZCB(z)
@@ -162,7 +220,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for phi_O in phi_Os:
+        for phi_O in tqdm(phi_Os, desc='fixed_phi_O'):
             # Test with and without ATP homeostasis -- first with
             ref_lam = lam.copy()
             # Note we are fixing phi_O here to highlight the contribution of phi_H
@@ -189,7 +247,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for ana_kDa in mKdas:
+        for ana_kDa in tqdm(mKdas, desc='fixed_gamma_ana'):
             # Test with and without ATP homeostasis -- first with
             ref_lam = lam.copy()
             ref_lam.set_process_mass('anabolism', ana_kDa)
@@ -213,7 +271,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for red_kDa in mKdas:
+        for red_kDa in tqdm(mKdas, desc='fixed_gamma_red'):
             # Test with and without ATP homeostasis -- first with
             ref_lam = lam.copy()
             ref_lam.set_process_mass('reduction', red_kDa)
@@ -240,7 +298,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for z in ZCreds:
+        for z in tqdm(ZCreds, desc='fixed_ZCred'):
             # Test with and without ATP homeostasis -- first with
             ref_lam = lam.copy()
             ref_lam.set_ZCred(z)
@@ -273,8 +331,8 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for S5 in S5vals:
-            for z in ZCreds:
+        for S5 in tqdm(S5vals, desc='fixed_S5', position=0):
+            for z in tqdm(ZCreds, desc='fixed_ZCred', position=1, leave=False):
                 # Test with and without ATP homeostasis -- first with
                 ref_lam = lam.copy()
                 ref_lam.set_ZCred(z)
@@ -303,8 +361,8 @@ def do_main(outdir, overwrite):
     if not path.exists(out_fname) or overwrite:
         results = []
 
-        for S4 in S4vals:
-            for z in ZCreds:
+        for S4 in tqdm(S4vals, desc='fixed_S4', position=0):
+            for z in tqdm(ZCreds, desc='fixed_ZCred', position=1, leave=False):
                 # Test with and without ATP homeostasis -- first with
                 ref_lam = lam.copy()
                 ref_lam.set_ZCred(z)
@@ -332,8 +390,8 @@ def do_main(outdir, overwrite):
 
     if not path.exists(out_fname) or overwrite:
         results = []
-        for S3 in S3vals:
-            for z in ZCreds:
+        for S3 in tqdm(S3vals, desc='fixed_S3', position=0):
+            for z in tqdm(ZCreds, desc='fixed_ZCred', position=1, leave=False):
                 # Test with and without ATP homeostasis -- first with
                 ref_lam = lam.copy()
                 ref_lam.set_ZCred(z)
@@ -363,8 +421,8 @@ def do_main(outdir, overwrite):
     if not path.exists(out_fname) or overwrite:
         results = []
 
-        for zcb in ZCBs:
-            for zcred in ZCreds:
+        for zcb in tqdm(ZCBs, desc='fixed_ZCB', position=0):
+            for zcred in tqdm(ZCreds, desc='fixed_ZCred', position=1, leave=False):
                 # Test with and without ATP homeostasis -- first with
                 ref_lam = lam.copy()
                 ref_lam.set_ZCred(zcred)
@@ -394,9 +452,9 @@ def do_main(outdir, overwrite):
         # unconstrained maximum from the above sweep
         max_C_uptake_fluxes = np.arange(0.1, 0.91, 0.4)*6e-05
 
-        for max_C_uptake_flux in max_C_uptake_fluxes:
-            for zcb in ZCBs:
-                for zcred in ZCreds:
+        for max_C_uptake_flux in tqdm(max_C_uptake_fluxes, desc='max_C_uptake', position=0):
+            for zcb in tqdm(ZCBs, desc='fixed_ZCB', position=1, leave=False):
+                for zcred in tqdm(ZCreds, desc='fixed_ZCred', position=2, leave=False):
                     # Test with and without ATP homeostasis -- first with
                     ref_lam = lam.copy()
                     ref_lam.set_ZCred(zcred)
@@ -448,7 +506,7 @@ def do_main(outdir, overwrite):
         auto_results = []
         auto_ext_C_results = []
         results = []
-        for idx in range(100):
+        for idx in tqdm(range(100), desc='run_index', position=0):
             # Set the process masses to the sampled values for all models
             for pmass, process in zip(pmasses[:,idx], 'oxidation,reduction,anabolism'.split(',')):
                 auto_lam.set_process_mass(process, pmass)
@@ -475,7 +533,7 @@ def do_main(outdir, overwrite):
             # intracellular metabolites and Cred is intracellular in autotrophy.
             # Setting a range of Cred concentrations. Middle value of 1e-6 
             # is a biologically reasonable value of ≈ 1 mM. 
-            for c_red in Cred_concs:
+            for c_red in tqdm(Cred_concs, desc='C_red_conc', position=1, leave=False):
                 auto_params = params.copy()
                 auto_params.fixed_C_red = c_red
                 auto_opt, auto_opt_prob = auto_lam.maximize_growth_rate(auto_params)
@@ -508,7 +566,7 @@ def do_main(outdir, overwrite):
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
         results = []
-        for zcred in ZCreds:
+        for zcred in tqdm(ZCreds, desc='fixed_ZCred'):
             my_lam = auto_lam.copy()
             my_lam.set_ZCred(zcred)
             # Make fresh parameters with a new max_lambda_hr
@@ -554,10 +612,10 @@ def do_main(outdir, overwrite):
         C_ox_concs = np.logspace(-8, 1, 50)
         results = []
 
-        for c in C_ox_concs:
+        for c in tqdm(C_ox_concs, desc='fixed_Cox_conc'):
             # Make fresh parameters with a new max_lambda_hr
             params = GrowthRateOptParams(min_phi_O=0.4, maintenance_cost=0,
-                                        fixed_C_ox=c, **DEFAULT_OPT_VALS)
+                                         fixed_C_ox=c, **DEFAULT_OPT_VALS)
             
             for label, my_lam in ferm_lam_dict.items():
                 opt, opt_prob = my_lam.maximize_growth_rate(params)
@@ -575,7 +633,7 @@ def do_main(outdir, overwrite):
 
     # Skip this optimization if output exists and we're not overwriting
     if not path.exists(out_fname) or overwrite:
-        for lam_val in lambdas:
+        for lam_val in tqdm(lambdas, desc='fixed_lambda'):
             # Make fresh parameters with a new max_lambda_hr
             params = GrowthRateOptParams(min_phi_O=0.4, max_lambda_hr=lam_val,
                                          maintenance_cost=0, fixed_C_ox=DEFAULT_C_OX,
@@ -609,7 +667,7 @@ def do_main(outdir, overwrite):
         ferm_ext_C_more_ATP_results = []
         ferm_ext_C_results = []
         results = []
-        for idx in range(100):
+        for idx in tqdm(range(100), desc='run_index', position=0):
             # Set the process masses to the sampled values for all models
             for pmass, process in zip(pmasses[:,idx], 'oxidation,reduction,anabolism'.split(',')):
                 ferm_lam.set_process_mass(process, pmass)
@@ -639,7 +697,7 @@ def do_main(outdir, overwrite):
             ferm_ext_C_more_ATP_results.append(d)
 
             # Now models with mass balance of Cox enforced at various concs. 
-            for c_ox in Cox_concs:
+            for c_ox in tqdm(Cox_concs, desc='C_ox_conc', position=1, leave=False):
                 ferm_params.fixed_C_ox = c_ox
                 _, ferm_opt_prob = ferm_lam.maximize_growth_rate(ferm_params)
                 d = ferm_lam.results_as_dict(ferm_opt_prob, ferm_params)
