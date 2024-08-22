@@ -73,6 +73,7 @@ class SingleSubstrateMMRateLaw(RateLawFunctor):
 
         Args:
             KM: float, Michaelis-Menten constant.
+                Default value is approx 100 uM in mol/gC units 
         """
         self.KM = KM
 
@@ -127,7 +128,7 @@ class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
 
         Args:
             KM: float, Michaelis-Menten constant.
-                Default value is approx 1 mM in mol/gCDW units 
+                Default value is approx 100 uM in mol/gC units 
         """
         self.KM = KM
 
@@ -174,6 +175,10 @@ class MultiSubstrateMMRateLaw(SingleSubstrateMMRateLaw):
 class GrowthRateOptParams(object):
     """A class to hold the parameters for the growth rate optimization problem.
 
+    Here we accidentally used gCDW to mean grams carbon in dry weight, but it's
+    typically  used to mean "grams cell dry weight". This is a bit confusing.
+    TODO: Fix this in the whole codebase. 
+
     Attributes:
         do_dilution: boolean, whether to include dilution in the model.
         dilute_as_sum: boolean, whether to dilute ATP as ATP + ADP and
@@ -187,17 +192,17 @@ class GrowthRateOptParams(object):
         max_phi_S: float, minimum C mass fraction for ECH sink.
         maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
-        ATP_maint: float, maintenance in units of [mol ATP/gCDW/s].
+        ATP_maint: float, maintenance in units of [mol ATP/gC/s].
         max_lambda_hr: float, maximum lambda value. Units of [1/hr].
-        max_C_uptake: float, maximum C uptake rate. Units of [mol C/gCDW/s].
-        fixed_ATP: float, fixed ATP concentration. [mol/gCDW] units.
-        fixed_ECH: float, fixed ECH concentration. [mol/gCDW] units.
+        max_C_uptake: float, maximum C uptake rate. Units of [mol C/gC/s].
+        fixed_ATP: float, fixed ATP concentration. [mol/gC] units.
+        fixed_ECH: float, fixed ECH concentration. [mol/gC] units.
         fixed_re: float, fixed ratio of EC/ECH concentrations.
         fixed_ra: float, fixed ratio of ADP/ATP concentrations.
-        fixed_EC: float, fixed EC concentration. [mol/gCDW] units.
-        fixed_ADP: float, fixed ADP concentration. [mol/gCDW] units.
-        fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
-        fixed_C_ox: float, fixed oxidized C concentration. [mol/gCDW] units.
+        fixed_EC: float, fixed EC concentration. [mol/gC] units.
+        fixed_ADP: float, fixed ADP concentration. [mol/gC] units.
+        fixed_C_red: float, fixed reduced C concentration. [mol/gC] units.
+        fixed_C_ox: float, fixed oxidized C concentration. [mol/gC] units.
     """
     def __init__(self, do_dilution=False, dilute_as_sum=False, rate_law=None,
                  min_phi_O=None, phi_O=None,
@@ -220,12 +225,12 @@ class GrowthRateOptParams(object):
             maintenance_cost: float, maintenance cost. Units of [mmol ATP/gDW/hr].
                 These are typically reported units for convenience.
             max_lambda_hr: float, maximum lambda value. Units of [1/hr].
-            fixed_ATP: float, fixed ATP concentration. [mol/gCDW] units.
-            fixed_ECH: float, fixed ECH concentration. [mol/gCDW] units.
+            fixed_ATP: float, fixed ATP concentration. [mol/gC] units.
+            fixed_ECH: float, fixed ECH concentration. [mol/gC] units.
             fixed_re: float, fixed ratio of EC/ECH concentrations.
             fixed_ra: float, fixed ratio of ADP/ATP concentrations.
-            fixed_C_red: float, fixed reduced C concentration. [mol/gCDW] units.
-            fixed_C_ox: float, fixed oxidized C concentration. [mol/gCDW] units.
+            fixed_C_red: float, fixed reduced C concentration. [mol/gC] units.
+            fixed_C_ox: float, fixed oxidized C concentration. [mol/gC] units.
         """
         msg = "Only one of min_phi_O and phi_O should be set."
         assert (min_phi_O is None) or (phi_O is None), msg
@@ -268,7 +273,7 @@ class GrowthRateOptParams(object):
         self.fixed_C_red = fixed_C_red or 1
         self.fixed_C_ox = fixed_C_ox or 1
 
-        # Convert maintenance to mol ATP/gCDW/s
+        # Convert maintenance to mol ATP/gC/s
         self.maintenance_cost = maintenance_cost or 0
         m = 1e-3*(self.maintenance_cost)/S_PER_HR   # mol ATP/gDW/s
         self.ATP_maint = m / GC_PER_GDW
