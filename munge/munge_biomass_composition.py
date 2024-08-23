@@ -91,7 +91,7 @@ ZCs = np.array([-0.15, 0.9, 0.6, 0])
 Cmass_fracs = np.array([prot_Cmass_frac, RNA_Cmass_frac,
                         DNA_Cmass_frac, 0.6])
 print('compartments: protein, RNA, DNA, remainder')
-print('ZCs', ZCs)
+print('assumed ZCs', ZCs)
 print('Cmass_fracs', Cmass_fracs)
 
 # Convert back to fractions
