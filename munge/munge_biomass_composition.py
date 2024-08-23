@@ -99,6 +99,12 @@ biomass_frac = biomass_fraction_df[frac_cols].copy()
 biomass_cfrac = biomass_frac * Cmass_fracs
 inferred_ZCBs = (biomass_cfrac * ZCs).sum(axis=1)
 inferred_ZCBs.name = 'infered_ZCB'
+
+# Add in the C mass fractions for plotting.
+biomass_fraction_df['DNA_C_mass_fraction'] = biomass_cfrac['DNA_mass_fraction']
+biomass_fraction_df['RNA_C_mass_fraction'] = biomass_cfrac['RNA_mass_fraction']
+biomass_fraction_df['protein_C_mass_fraction'] = biomass_cfrac['protein_mass_fraction']
+biomass_fraction_df['remainder_C_mass_fraction'] = biomass_cfrac['remainder_mass_fraction']
 biomass_fraction_df['inferred_ZCB'] = inferred_ZCBs
 biomass_fraction_df.to_csv(
         'data/physiology/BremerDennis2008_InferredZCB.csv', float_format='%.3f')
