@@ -27,7 +27,7 @@ def _argparser():
         argparse.ArgumentParser: parser for command-line arguments.
     """
     parser = argparse.ArgumentParser(
-        prog='calc_nosc.py',
+        prog='calc_genome_nosc_batch.py',
         description='Calculates Z_C values for protein sequences in FASTA files.',
         epilog='Text at the bottom of help')
 
@@ -35,9 +35,9 @@ def _argparser():
                         help='input directory or filename')
     parser.add_argument('-o', '--outdir', dest='outdir',
                         help='output directory')
-    parser.add_argument('-n', '--num_processors', dest='num_processors',
+    parser.add_argument('-n', '--num_processes', dest='num_processes',
                         type=int, default=1,
-                        help='number of processors to use')
+                        help='number of processes to spawn to use')
     return parser
 
 
