@@ -67,23 +67,13 @@ total_lipids_marr.to_excel(writer, sheet_name='E. coli total lipid Z_C', index=F
 
 writer.close()
 
-# Load GTDB data.
+# Load GTDB bac120 data
 print('Making Table S3... GTDB ZC values')
-# Copy the CSV file with bac120 ZC values into the SI tables directory.
-# It's too big to save as excel. Also, we are using a file with Z_C values
-# rounded to 4 decimal places to save space. Raw is simple to recompute 
-# from the code here. 
-cp_cmd = 'cp data/gtdb/r207/bac120_nosc_vals_wide_compressed.csv si_tables/SuppTable3_GTDB_ZC.csv'
-os.system(cp_cmd)
 
-# Compress the file
-gzip_cmd = 'gzip si_tables/SuppTable3_GTDB_ZC.csv'
-os.system(gzip_cmd)
-
-# Make an excel of the raw ZC values 
-pd.read_csv('data/gtdb/r207/bac120_nosc_vals_wide_compressed.csv'
-    ).to_excel('si_tables/SuppTable3_GTDB_ZC.xlsx',
-               sheet_name='bac120', index=False)
+# Make an excel of the raw ZC values
+pd.read_csv('output/gtdb/r207/bac120_nosc_vals_wide_compressed.csv'
+    ).to_excel('si_tables/SuppTable3_GTDB_bac120_ZC.xlsx',
+               sheet_name='bac120_ZC_values', index=False)
 
 # Read the correlation matrix for bac120 -- raw correlations first
 print('Making Table S4... GTDB ZC correlations')
@@ -96,13 +86,13 @@ desc_dict = {
 }
 desc_df = pd.DataFrame(desc_dict)
 
-nosc_corr_df = pd.read_csv('data/gtdb/r207/bac120_nosc_corr.csv')
+nosc_corr_df = pd.read_csv('output/gtdb/r207/bac120_nosc_corr.csv')
 col_renames = {'p-unc': 'uncorrected p-value',
                'p-corr': 'corrected p-value',
                'p-adjust': 'p-value correction'}
 nosc_corr_df.rename(columns=col_renames, inplace=True)
 
-nosc_corr_controlled_df = pd.read_csv('data/gtdb/r207/bac120_nosc_corr_controlled_for_genome_nosc.csv')
+nosc_corr_controlled_df = pd.read_csv('output/gtdb/r207/bac120_nosc_corr_controlled_for_genome_nosc.csv')
 nosc_corr_controlled_df.rename(columns=col_renames, inplace=True)
 
 # Make a single excel file with all the data
