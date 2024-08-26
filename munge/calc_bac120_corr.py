@@ -9,7 +9,9 @@ from os import path
 
 # Read the ZC values for bac120 as a wide-form matrix
 print('Reading calculated bac120 NOSC values...')
-bac120_nosc_df = pd.read_csv('data/gtdb/r207/bac120_nosc_vals_wide.csv', index_col=0)
+# These are calculated via munge/munge_bac120.py
+# Since the output is large, it is not included in the repo.
+bac120_nosc_df = pd.read_csv('output/gtdb/r207/bac120_nosc_vals_wide.csv', index_col=0)
 
 # Trim the ".1" from the end of the accession numbers so they match other GTDB data
 trimmed_ids = [x.split('.')[0] for x in bac120_nosc_df.index.tolist()]
@@ -110,8 +112,8 @@ def _save_corr_df(corr_df, fname):
     # Save
     corr_df.to_csv(fname, index=False)
 
-my_fname = 'data/gtdb/r207/bac120_nosc_corr.csv'
+my_fname = 'output/gtdb/r207/bac120_nosc_corr.csv'
 _save_corr_df(nosc_corr, my_fname)
 
-my_fname = 'data/gtdb/r207/bac120_nosc_corr_controlled_for_genome_nosc.csv'
+my_fname = 'output/gtdb/r207/bac120_nosc_corr_controlled_for_genome_nosc.csv'
 _save_corr_df(nosc_corr_controlled, my_fname)
