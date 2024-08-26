@@ -96,9 +96,13 @@ print('Cmass_fracs', Cmass_fracs)
 
 # Convert back to fractions
 biomass_frac = biomass_fraction_df[frac_cols].copy()
-biomass_cfrac = biomass_frac * Cmass_fracs
+biomass_cfrac = (biomass_frac * Cmass_fracs)
+biomass_cfrac = biomass_cfrac.div(biomass_cfrac.sum(axis=1), axis=0)
 inferred_ZCBs = (biomass_cfrac * ZCs).sum(axis=1)
 inferred_ZCBs.name = 'infered_ZCB'
+
+print('Biomass carbon sums')
+print(biomass_cfrac.sum(axis=1))
 
 # Add in the C mass fractions for plotting.
 biomass_fraction_df['DNA_C_mass_fraction'] = biomass_cfrac['DNA_mass_fraction']
