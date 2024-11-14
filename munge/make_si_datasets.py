@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 # Metabolic modes of E. coli
-print('Making Table S1... growth capabilities')
+print('Making Dataset S1... growth capabilities')
 
 # Make a dataframe describing the subsequent sheets in this file. 
 desc_dict = {
@@ -29,7 +29,7 @@ mask = max_lambda_df.to_plot
 max_lambda_df = max_lambda_df[mask].copy().drop('to_plot', axis=1)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/SuppTable1_Growth.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('si_tables/DatasetS1_Growth.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 coli_growth_df.to_excel(writer, sheet_name='E. coli observations', index=False)
@@ -39,12 +39,12 @@ max_lambda_df.to_excel(writer, sheet_name='Fastest growth rates', index=False)
 writer.close()
 
 # Amino acid properties
-print('Making Table S2... amino acid properties')
+print('Making Dataset S2... amino acid properties')
 aa_nosc_df = pd.read_csv('data/aa_nosc.csv')
-aa_nosc_df.to_excel('si_tables/SuppTable2_AA_properties.xlsx', index=False)
+aa_nosc_df.to_excel('si_tables/DatasetS2_AA_properties.xlsx', index=False)
 
 # Load the lipid data -- doing this before the slower operations, despite it being table S6.
-print('Making Table S6... lipid data')
+print('Making Dataset S6... lipid data')
 lipids_by_cond_df = pd.read_csv('data/lipids/Coli/Marr1962_JBac_long.csv')
 lipids_by_cond_df.rename(columns={'NOSC': 'Z_C'}, inplace=True)
 total_lipids_marr = pd.read_csv('data/lipids/Coli/Marr1962_total_lipids_NOSC.csv')
@@ -59,7 +59,7 @@ desc_dict = {
 desc_df = pd.DataFrame(desc_dict)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/SuppTable6_Lipids.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('si_tables/DatasetS6_Lipids.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 lipids_by_cond_df.to_excel(writer, sheet_name='E. coli lipid measurements', index=False)
@@ -68,15 +68,15 @@ total_lipids_marr.to_excel(writer, sheet_name='E. coli total lipid Z_C', index=F
 writer.close()
 
 # Load GTDB bac120 data
-print('Making Table S3... GTDB ZC values')
+print('Making Dataset S3... GTDB ZC values')
 
 # Make an excel of the raw ZC values
 pd.read_csv('output/gtdb/r207/bac120_nosc_vals_wide_compressed.csv'
-    ).to_excel('si_tables/SuppTable3_GTDB_bac120_ZC.xlsx',
+    ).to_excel('si_tables/DatasetS3_GTDB_bac120_ZC.xlsx',
                sheet_name='bac120_ZC_values', index=False)
 
 # Read the correlation matrix for bac120 -- raw correlations first
-print('Making Table S4... GTDB ZC correlations')
+print('Making Dataset S4... GTDB ZC correlations')
 
 desc_dict = {
     'Sheet': ['bac120 ZC correlations', 
@@ -96,7 +96,7 @@ nosc_corr_controlled_df = pd.read_csv('output/gtdb/r207/bac120_nosc_corr_control
 nosc_corr_controlled_df.rename(columns=col_renames, inplace=True)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/SuppTable4_GTDB_correlations.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('si_tables/DatasetS4_GTDB_correlations.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 nosc_corr_df.to_excel(writer, sheet_name='bac120 ZC correlations', index=False)
@@ -106,7 +106,7 @@ writer.close()
 
 # Load the growth conditions and proteome ZC
 # Omitting the raw proteomic and genomic tables for now due to size limits.
-print('Making Table S2... proteome Z_C')
+print('Making Dataset S2... proteome Z_C')
 desc_dict = {
     'Sheet': ['E. coli conditions', 
               'S. cerevisiae conditions', 
@@ -165,7 +165,7 @@ all_expression_data.fg_per_cell = all_expression_data.fg_per_cell.round(6)
 all_expression_data.growth_rate_hr = all_expression_data.growth_rate_hr.round(4)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/SuppTable5_Proteomes.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('si_tables/DatasetS5_Proteomes.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 coli_data.to_excel(writer, sheet_name='E. coli conditions', index=False)
