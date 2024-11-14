@@ -29,7 +29,7 @@ mask = max_lambda_df.to_plot
 max_lambda_df = max_lambda_df[mask].copy().drop('to_plot', axis=1)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/DatasetS1_Growth.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('output/si_datasets/DatasetS1_Growth.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 coli_growth_df.to_excel(writer, sheet_name='E. coli observations', index=False)
@@ -41,7 +41,7 @@ writer.close()
 # Amino acid properties
 print('Making Dataset S2... amino acid properties')
 aa_nosc_df = pd.read_csv('data/aa_nosc.csv')
-aa_nosc_df.to_excel('si_tables/DatasetS2_AA_properties.xlsx', index=False)
+aa_nosc_df.to_excel('output/si_datasets/DatasetS2_AA_properties.xlsx', index=False)
 
 # Load the lipid data -- doing this before the slower operations, despite it being table S6.
 print('Making Dataset S6... lipid data')
@@ -59,7 +59,7 @@ desc_dict = {
 desc_df = pd.DataFrame(desc_dict)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/DatasetS6_Lipids.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('output/si_datasets/DatasetS6_Lipids.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 lipids_by_cond_df.to_excel(writer, sheet_name='E. coli lipid measurements', index=False)
@@ -72,7 +72,7 @@ print('Making Dataset S3... GTDB ZC values')
 
 # Make an excel of the raw ZC values
 pd.read_csv('output/gtdb/r207/bac120_nosc_vals_wide_compressed.csv'
-    ).to_excel('si_tables/DatasetS3_GTDB_bac120_ZC.xlsx',
+    ).to_excel('output/si_datasets/DatasetS3_GTDB_bac120_ZC.xlsx',
                sheet_name='bac120_ZC_values', index=False)
 
 # Read the correlation matrix for bac120 -- raw correlations first
@@ -96,7 +96,7 @@ nosc_corr_controlled_df = pd.read_csv('output/gtdb/r207/bac120_nosc_corr_control
 nosc_corr_controlled_df.rename(columns=col_renames, inplace=True)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/DatasetS4_GTDB_correlations.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('output/si_datasets/DatasetS4_GTDB_correlations.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 nosc_corr_df.to_excel(writer, sheet_name='bac120 ZC correlations', index=False)
@@ -165,7 +165,7 @@ all_expression_data.fg_per_cell = all_expression_data.fg_per_cell.round(6)
 all_expression_data.growth_rate_hr = all_expression_data.growth_rate_hr.round(4)
 
 # Make a single excel file with all the data
-writer = pd.ExcelWriter('si_tables/DatasetS5_Proteomes.xlsx', engine="openpyxl")
+writer = pd.ExcelWriter('output/si_datasets/DatasetS5_Proteomes.xlsx', engine="openpyxl")
 
 desc_df.to_excel(writer, sheet_name='Table descriptions', index=False)
 coli_data.to_excel(writer, sheet_name='E. coli conditions', index=False)
